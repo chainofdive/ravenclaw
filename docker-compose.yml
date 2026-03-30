@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ravenclaw-db
+    environment:
+      POSTGRES_USER: ravenclaw
+      POSTGRES_PASSWORD: ravenclaw
+      POSTGRES_DB: ravenclaw
+    ports:
+      - "5432:5432"
+    volumes:
+      - ravenclaw-data:/var/lib/postgresql/data
+
+volumes:
+  ravenclaw-data:

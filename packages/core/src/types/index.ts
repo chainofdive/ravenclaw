@@ -1,0 +1,305 @@
+import { z } from "zod";
+import type {
+  workspaces,
+  apiKeys,
+  epics,
+  issues,
+  dependencies,
+  wikiPages,
+  wikiPageVersions,
+  ontologyConcepts,
+  ontologyRelations,
+  activityLog,
+} from "../db/schema.js";
+
+// ─── Drizzle Inferred Types ─────────────────────────────────────────────────
+
+export type Workspace = typeof workspaces.$inferSelect;
+export type NewWorkspace = typeof workspaces.$inferInsert;
+
+export type ApiKey = typeof apiKeys.$inferSelect;
+export type NewApiKey = typeof apiKeys.$inferInsert;
+
+export type Epic = typeof epics.$inferSelect;
+export type NewEpic = typeof epics.$inferInsert;
+
+export type Issue = typeof issues.$inferSelect;
+export type NewIssue = typeof issues.$inferInsert;
+
+export type Dependency = typeof dependencies.$inferSelect;
+export type NewDependency = typeof dependencies.$inferInsert;
+
+export type WikiPage = typeof wikiPages.$inferSelect;
+export type NewWikiPage = typeof wikiPages.$inferInsert;
+
+export type WikiPageVersion = typeof wikiPageVersions.$inferSelect;
+export type NewWikiPageVersion = typeof wikiPageVersions.$inferInsert;
+
+export type OntologyConcept = typeof ontologyConcepts.$inferSelect;
+export type NewOntologyConcept = typeof ontologyConcepts.$inferInsert;
+
+export type OntologyRelation = typeof ontologyRelations.$inferSelect;
+export type NewOntologyRelation = typeof ontologyRelations.$inferInsert;
+
+export type ActivityLogEntry = typeof activityLog.$inferSelect;
+export type NewActivityLogEntry = typeof activityLog.$inferInsert;
+
+// ─── Enum Value Types ───────────────────────────────────────────────────────
+
+export type EpicStatus = "backlog" | "active" | "completed" | "cancelled";
+export type IssueStatus =
+  | "todo"
+  | "in_progress"
+  | "in_review"
+  | "done"
+  | "cancelled";
+export type Priority = "critical" | "high" | "medium" | "low";
+export type IssueType = "task" | "bug" | "spike" | "story";
+export type DependencyType = "blocks" | "depends_on" | "relates_to";
+export type EntityType = "epic" | "issue" | "wiki_page" | "concept";
+export type ActivityAction =
+  | "created"
+  | "updated"
+  | "status_changed"
+  | "deleted";
+export type ConceptType =
+  | "technology"
+  | "domain"
+  | "pattern"
+  | "person"
+  | "system"
+  | "custom";
+export type RelationType =
+  | "uses"
+  | "part_of"
+  | "depends_on"
+  | "related_to"
+  | "instance_of";
+
+// ─── Zod Schemas ────────────────────────────────────────────────────────────
+
+// Workspace
+export const CreateWorkspaceInput = z.object({
+  name: z.string().min(1).max(255),
+  slug: z.string().min(1).max(100),
+  description: z.string().nullable().optional(),
+  settings: z.record(z.unknown()).optional(),
+});
+export type CreateWorkspaceInput = z.infer<typeof CreateWorkspaceInput>;
+
+export const UpdateWorkspaceInput = z.object({
+  name: z.string().min(1).max(255).optional(),
+  slug: z.string().min(1).max(100).optional(),
+  description: z.string().nullable().optional(),
+  settings: z.record(z.unknown()).optional(),
+});
+export type UpdateWorkspaceInput = z.infer<typeof UpdateWorkspaceInput>;
+
+// Epic
+export const CreateEpicInput = z.object({
+  workspaceId: z.string().uuid(),
+  parentEpicId: z.string().uuid().nullable().optional(),
+  title: z.string().min(1).max(500),
+  description: z.string().optional(),
+  status: z.enum(["backlog", "active", "completed", "cancelled"]).optional(),
+  priority: z.enum(["critical", "high", "medium", "low"]).optional(),
+  metadata: z.record(z.unknown()).optional(),
+  startedAt: z.coerce.date().nullable().optional(),
+  targetDate: z.coerce.date().nullable().optional(),
+});
+export type CreateEpicInput = z.infer<typeof CreateEpicInput>;
+
+export const UpdateEpicInput = z.object({
+  parentEpicId: z.string().uuid().nullable().optional(),
+  title: z.string().min(1).max(500).optional(),
+  description: z.string().optional(),
+  status: z.enum(["backlog", "active", "completed", "cancelled"]).optional(),
+  priority: z.enum(["critical", "high", "medium", "low"]).optional(),
+  metadata: z.record(z.unknown()).optional(),
+  startedAt: z.coerce.date().nullable().optional(),
+  targetDate: z.coerce.date().nullable().optional(),
+  completedAt: z.coerce.date().nullable().optional(),
+});
+export type UpdateEpicInput = z.infer<typeof UpdateEpicInput>;
+
+// Issue
+export const CreateIssueInput = z.object({
+  workspaceId: z.string().uuid(),
+  epicId: z.string().uuid(),
+  parentIssueId: z.string().uuid().nullable().optional(),
+  title: z.string().min(1).max(500),
+  description: z.string().optional(),
+  status: z
+    .enum(["todo", "in_progress", "in_review", "done", "cancelled"])
+    .optional(),
+  priority: z.enum(["critical", "high", "medium", "low"]).optional(),
+  issueType: z.enum(["task", "bug", "spike", "story"]).optional(),
+  assignee: z.string().max(255).nullable().optional(),
+  labels: z.array(z.string()).optional(),
+  metadata: z.record(z.unknown()).optional(),
+  estimatedHours: z.string().nullable().optional(),
+  actualHours: z.string().nullable().optional(),
+});
+export type CreateIssueInput = z.infer<typeof CreateIssueInput>;
+
+export const UpdateIssueInput = z.object({
+  epicId: z.string().uuid().optional(),
+  parentIssueId: z.string().uuid().nullable().optional(),
+  title: z.string().min(1).max(500).optional(),
+  description: z.string().optional(),
+  status: z
+    .enum(["todo", "in_progress", "in_review", "done", "cancelled"])
+    .optional(),
+  priority: z.enum(["critical", "high", "medium", "low"]).optional(),
+  issueType: z.enum(["task", "bug", "spike", "story"]).optional(),
+  assignee: z.string().max(255).nullable().optional(),
+  labels: z.array(z.string()).optional(),
+  metadata: z.record(z.unknown()).optional(),
+  estimatedHours: z.string().nullable().optional(),
+  actualHours: z.string().nullable().optional(),
+  startedAt: z.coerce.date().nullable().optional(),
+  completedAt: z.coerce.date().nullable().optional(),
+});
+export type UpdateIssueInput = z.infer<typeof UpdateIssueInput>;
+
+// Dependency
+export const CreateDependencyInput = z.object({
+  workspaceId: z.string().uuid(),
+  sourceType: z.enum(["epic", "issue", "wiki_page", "concept"]),
+  sourceId: z.string().uuid(),
+  targetType: z.enum(["epic", "issue", "wiki_page", "concept"]),
+  targetId: z.string().uuid(),
+  dependencyType: z.enum(["blocks", "depends_on", "relates_to"]),
+});
+export type CreateDependencyInput = z.infer<typeof CreateDependencyInput>;
+
+// Wiki Page
+export const CreateWikiPageInput = z.object({
+  workspaceId: z.string().uuid(),
+  parentId: z.string().uuid().nullable().optional(),
+  slug: z.string().min(1).max(500),
+  title: z.string().min(1).max(500),
+  content: z.string().optional(),
+  summary: z.string().nullable().optional(),
+  tags: z.array(z.string()).optional(),
+  linkedEpics: z.array(z.string().uuid()).optional(),
+  linkedIssues: z.array(z.string().uuid()).optional(),
+  metadata: z.record(z.unknown()).optional(),
+});
+export type CreateWikiPageInput = z.infer<typeof CreateWikiPageInput>;
+
+export const UpdateWikiPageInput = z.object({
+  parentId: z.string().uuid().nullable().optional(),
+  slug: z.string().min(1).max(500).optional(),
+  title: z.string().min(1).max(500).optional(),
+  content: z.string().optional(),
+  summary: z.string().nullable().optional(),
+  tags: z.array(z.string()).optional(),
+  linkedEpics: z.array(z.string().uuid()).optional(),
+  linkedIssues: z.array(z.string().uuid()).optional(),
+  metadata: z.record(z.unknown()).optional(),
+  changeSummary: z.string().max(500).optional(),
+  changedBy: z.string().max(255).optional(),
+});
+export type UpdateWikiPageInput = z.infer<typeof UpdateWikiPageInput>;
+
+// Ontology Concept
+export const CreateOntologyConceptInput = z.object({
+  workspaceId: z.string().uuid(),
+  name: z.string().min(1).max(255),
+  conceptType: z.enum([
+    "technology",
+    "domain",
+    "pattern",
+    "person",
+    "system",
+    "custom",
+  ]),
+  description: z.string().nullable().optional(),
+  aliases: z.array(z.string()).optional(),
+  sourceRefs: z
+    .array(z.object({ entityType: z.string(), entityId: z.string() }))
+    .optional(),
+  metadata: z.record(z.unknown()).optional(),
+});
+export type CreateOntologyConceptInput = z.infer<
+  typeof CreateOntologyConceptInput
+>;
+
+export const UpdateOntologyConceptInput = z.object({
+  name: z.string().min(1).max(255).optional(),
+  conceptType: z
+    .enum(["technology", "domain", "pattern", "person", "system", "custom"])
+    .optional(),
+  description: z.string().nullable().optional(),
+  aliases: z.array(z.string()).optional(),
+  sourceRefs: z
+    .array(z.object({ entityType: z.string(), entityId: z.string() }))
+    .optional(),
+  metadata: z.record(z.unknown()).optional(),
+  frequency: z.number().int().optional(),
+});
+export type UpdateOntologyConceptInput = z.infer<
+  typeof UpdateOntologyConceptInput
+>;
+
+// Ontology Relation
+export const CreateOntologyRelationInput = z.object({
+  workspaceId: z.string().uuid(),
+  sourceConceptId: z.string().uuid(),
+  targetConceptId: z.string().uuid(),
+  relationType: z.enum([
+    "uses",
+    "part_of",
+    "depends_on",
+    "related_to",
+    "instance_of",
+  ]),
+  strength: z.string().optional(),
+  evidence: z
+    .array(z.object({ source: z.string(), context: z.string() }))
+    .optional(),
+});
+export type CreateOntologyRelationInput = z.infer<
+  typeof CreateOntologyRelationInput
+>;
+
+// Activity Log
+export const CreateActivityLogInput = z.object({
+  workspaceId: z.string().uuid(),
+  entityType: z.enum(["epic", "issue", "wiki_page", "concept"]),
+  entityId: z.string().uuid(),
+  action: z.enum(["created", "updated", "status_changed", "deleted"]),
+  actor: z.string().min(1).max(255),
+  changes: z.record(z.unknown()).optional(),
+  context: z.record(z.unknown()).optional(),
+});
+export type CreateActivityLogInput = z.infer<typeof CreateActivityLogInput>;
+
+// ─── Filter Types ───────────────────────────────────────────────────────────
+
+export interface EpicFilters {
+  status?: EpicStatus;
+  priority?: Priority;
+  parentEpicId?: string | null;
+}
+
+export interface IssueFilters {
+  epicId?: string;
+  status?: IssueStatus;
+  priority?: Priority;
+  issueType?: IssueType;
+  assignee?: string;
+  labels?: string[];
+}
+
+export interface ConceptFilters {
+  conceptType?: ConceptType;
+  name?: string;
+}
+
+export interface SearchFilters {
+  entityTypes?: EntityType[];
+  limit?: number;
+  offset?: number;
+}

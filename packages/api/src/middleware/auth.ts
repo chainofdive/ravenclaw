@@ -1,0 +1,66 @@
+import { createMiddleware } from "hono/factory";
+import { createHash } from "node:crypto";
+import { sql } from "drizzle-orm";
+import type { AppEnv } from "../app.js";
+import { unauthorized } from "./error.js";
+
+const PUBLIC_PATHS = ["/api/v1/health"];
+
+export const authMiddleware = createMiddleware<AppEnv>(async (c, next) => {
+  // Skip auth for public paths
+  if (PUBLIC_PATHS.includes(c.req.path)) {
+    return next();
+  }
+
+  const authorization = c.req.header("Authorization");
+  if (!authorization) {
+    unauthorized("Missing Authorization header");
+  }
+
+  const match = authorization!.match(/^Bearer\s+(rc_.+)$/);
+  if (!match) {
+    unauthorized("Invalid Authorization header format. Expected: Bearer rc_...");
+  }
+
+  const apiKey = match![1];
+  const keyHash = createHash("sha256").update(apiKey).digest("hex");
+
+  // Look up the API key in the database using parameterized query
+  const db = c.get("db") as { execute: (query: unknown) => Promise<unknown> };
+
+  try {
+    const result = await db.execute(
+      sql`SELECT workspace_id, expires_at, revoked_at FROM api_keys WHERE key_hash = ${keyHash} LIMIT 1`
+    );
+
+    const rows = result as unknown as Array<{
+      workspace_id: string;
+      expires_at: string | null;
+      revoked_at: string | null;
+    }>;
+
+    if (!rows || rows.length === 0) {
+      unauthorized("Invalid API key");
+    }
+
+    const row = rows[0];
+
+    if (row.revoked_at) {
+      unauthorized("API key has been revoked");
+    }
+
+    if (row.expires_at && new Date(row.expires_at) < new Date()) {
+      unauthorized("API key has expired");
+    }
+
+    c.set("workspaceId", row.workspace_id);
+  } catch (err) {
+    // If it's already an ApiHttpError from unauthorized(), re-throw
+    if (err instanceof Error && err.name === "ApiHttpError") {
+      throw err;
+    }
+    unauthorized("Failed to validate API key");
+  }
+
+  return next();
+});
