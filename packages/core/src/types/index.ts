@@ -11,6 +11,7 @@ import type {
   ontologyRelations,
   activityLog,
   comments,
+  epicLocks,
 } from "../db/schema.js";
 
 // ─── Drizzle Inferred Types ─────────────────────────────────────────────────
@@ -47,6 +48,9 @@ export type NewActivityLogEntry = typeof activityLog.$inferInsert;
 
 export type Comment = typeof comments.$inferSelect;
 export type NewComment = typeof comments.$inferInsert;
+
+export type EpicLock = typeof epicLocks.$inferSelect;
+export type NewEpicLock = typeof epicLocks.$inferInsert;
 
 // ─── Enum Value Types ───────────────────────────────────────────────────────
 
@@ -289,6 +293,29 @@ export const CreateCommentInput = z.object({
   author: z.string().max(255).optional(),
 });
 export type CreateCommentInput = z.infer<typeof CreateCommentInput>;
+
+// ─── Lock Types ────────────────────────────────────────────────────────────
+
+export interface LockResult {
+  acquired: boolean;
+  lock?: EpicLock;
+  heldBy?: { sessionId: string; agentName: string; expiresAt: string };
+}
+
+export interface LockStatus {
+  locked: boolean;
+  lock?: EpicLock;
+}
+
+export const AcquireLockInput = z.object({
+  workspaceId: z.string().uuid(),
+  epicId: z.string().uuid(),
+  sessionId: z.string().min(1).max(255),
+  agentName: z.string().max(255).optional(),
+  ttlMinutes: z.number().int().min(1).max(1440).optional(),
+  metadata: z.record(z.unknown()).optional(),
+});
+export type AcquireLockInput = z.infer<typeof AcquireLockInput>;
 
 // ─── Filter Types ───────────────────────────────────────────────────────────
 

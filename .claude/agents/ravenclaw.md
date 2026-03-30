@@ -37,6 +37,19 @@ When starting work on a task:
 - **Search context:** `rc search "keyword"`
 - **Read comments from the user:** Use `list_comments` MCP tool to check for user feedback on your current issue
 
+### Working with Epic Locks
+
+Before starting work on an epic's issues:
+1. `rc lock acquire <epic-id> --session $SESSION_ID --agent claude-code`
+2. Work on issues within the epic
+3. `rc lock heartbeat <epic-id> --session $SESSION_ID` (every 15 minutes)
+4. `rc lock release <epic-id> --session $SESSION_ID` when done
+
+Or simply use `rc issue start <key>` — it auto-acquires the epic lock when the `X-Session-Id` header is set.
+
+- Check existing locks before starting: `rc lock list`
+- If a lock is held by a crashed session, use `rc lock force-release <epic-id>`
+
 ### Guidelines
 
 - Always check `get_work_context` at the start of a session

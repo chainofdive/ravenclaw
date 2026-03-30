@@ -6,6 +6,7 @@ import { PriorityBadge } from '../components/PriorityBadge';
 import { ProgressBar } from '../components/ProgressBar';
 import { EpicTreeGraph, type GraphData } from '../components/EpicTreeGraph';
 import { CommentPanel } from '../components/CommentPanel';
+import { LockBadge } from '../components/LockBadge';
 
 type ViewMode = 'list' | 'graph';
 
@@ -137,7 +138,10 @@ export function Epics() {
                     <PriorityBadge priority={epic.priority} />
                     <span className="text-sm font-medium text-slate-800">{epic.title}</span>
                   </div>
-                  <StatusBadge status={epic.status} />
+                  <div className="flex items-center gap-2">
+                    <LockBadge epicId={epic.id} />
+                    <StatusBadge status={epic.status} />
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 mt-2 ml-8">
                   <ProgressBar value={epic.progress} className="flex-1 max-w-xs" />

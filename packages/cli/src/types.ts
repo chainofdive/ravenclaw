@@ -174,6 +174,28 @@ export interface Comment {
   updatedAt: string;
 }
 
+export interface EpicLock {
+  id: string;
+  workspaceId: string;
+  epicId: string;
+  sessionId: string;
+  agentName: string;
+  acquiredAt: string;
+  expiresAt: string;
+  metadata: Record<string, unknown>;
+}
+
+export interface LockResult {
+  acquired: boolean;
+  lock?: EpicLock;
+  heldBy?: { sessionId: string; agentName: string; expiresAt: string };
+}
+
+export interface LockStatus {
+  locked: boolean;
+  lock?: EpicLock;
+}
+
 export interface ApiErrorResponse {
   error: {
     code: string;

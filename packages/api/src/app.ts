@@ -8,6 +8,7 @@ import {
   OntologyService,
   SearchService,
   CommentService,
+  EpicLockService,
 } from "@ravenclaw/core";
 import { errorHandler } from "./middleware/error.js";
 import { requestLogger } from "./middleware/logging.js";
@@ -21,6 +22,8 @@ import ontologyRoutes from "./routes/ontology.js";
 import searchRoutes from "./routes/search.js";
 import dependencyRoutes from "./routes/dependencies.js";
 import commentRoutes from "./routes/comments.js";
+import lockRoutes from "./routes/locks.js";
+import locksListRoutes from "./routes/locksList.js";
 
 /**
  * Application environment type for Hono context.
@@ -38,6 +41,7 @@ export type AppEnv = {
     ontologyService: OntologyService;
     searchService: SearchService;
     commentService: CommentService;
+    epicLockService: EpicLockService;
   };
 };
 
@@ -51,6 +55,7 @@ export interface AppServices {
   ontologyService: OntologyService;
   searchService: SearchService;
   commentService: CommentService;
+  epicLockService: EpicLockService;
 }
 
 /**
@@ -78,6 +83,7 @@ export function createApp(services: AppServices): Hono<AppEnv> {
     c.set("ontologyService", services.ontologyService);
     c.set("searchService", services.searchService);
     c.set("commentService", services.commentService);
+    c.set("epicLockService", services.epicLockService);
     await next();
   });
 
@@ -94,6 +100,8 @@ export function createApp(services: AppServices): Hono<AppEnv> {
   app.route("/api/v1/search", searchRoutes);
   app.route("/api/v1/dependencies", dependencyRoutes);
   app.route("/api/v1/comments", commentRoutes);
+  app.route("/api/v1/epics", lockRoutes);
+  app.route("/api/v1/locks", locksListRoutes);
 
   // 404 catch-all
   app.notFound((c) => {

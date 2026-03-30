@@ -49,6 +49,30 @@ rc issue done <key>
 rc wiki write <topic-slug>
 ```
 
+### 6. Epic Locks (Multi-Agent Safety)
+
+Before starting work on an epic's issues, acquire a lock:
+```bash
+rc lock acquire <epic-id> --session $SESSION_ID --agent claude-code
+```
+
+Keep the lock alive during long work:
+```bash
+rc lock heartbeat <epic-id> --session $SESSION_ID
+```
+
+Release when done:
+```bash
+rc lock release <epic-id> --session $SESSION_ID
+```
+
+Or simply use `rc issue start <key>` — it auto-acquires the epic lock.
+
+Check for existing locks:
+```bash
+rc lock list
+```
+
 ## Tips
 
 - Use `rc context --compact` for a token-efficient summary

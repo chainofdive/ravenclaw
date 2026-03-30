@@ -126,6 +126,27 @@ export interface Comment {
   updatedAt: string;
 }
 
+export interface EpicLockInfo {
+  id: string;
+  epicId: string;
+  sessionId: string;
+  agentName: string;
+  acquiredAt: string;
+  expiresAt: string;
+  metadata: Record<string, unknown>;
+}
+
+export interface LockResult {
+  acquired: boolean;
+  lock?: EpicLockInfo;
+  heldBy?: { sessionId: string; agentName: string; expiresAt: string };
+}
+
+export interface LockStatus {
+  locked: boolean;
+  lock?: EpicLockInfo;
+}
+
 export interface Dependency {
   id: string;
   sourceType: string;
@@ -158,4 +179,23 @@ export const api = {
     apiFetch<{ deleted: boolean }>(`/comments/${encodeURIComponent(id)}`, {
       method: 'DELETE',
     }),
+
+  // Locks
+  checkLock: (epicId: string) =>
+    apiFetch<LockStatus>(`/epics/${encodeURIComponent(epicId)}/lock`),
+  acquireLock: (epicId: string, input: { sessionId: string; agentName?: string; ttlMinutes?: number }) =>
+    apiFetch<LockResult>(`/epics/${encodeURIComponent(epicId)}/lock`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  releaseLock: (epicId: string, sessionId: string) =>
+    apiFetch<{ released: boolean }>(`/epics/${encodeURIComponent(epicId)}/lock`, {
+      method: 'DELETE',
+      body: JSON.stringify({ sessionId }),
+    }),
+  forceReleaseLock: (epicId: string) =>
+    apiFetch<{ released: boolean }>(`/epics/${encodeURIComponent(epicId)}/lock/force`, {
+      method: 'DELETE',
+    }),
+  listLocks: () => apiFetch<EpicLockInfo[]>('/locks'),
 };

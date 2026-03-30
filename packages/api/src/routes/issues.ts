@@ -90,13 +90,53 @@ issues.delete("/:id", async (c) => {
 });
 
 // POST /api/v1/issues/:id/start — mark as in_progress
+// Auto-checks epic lock: if X-Session-Id header is present, enforces lock.
 issues.post("/:id/start", async (c) => {
   const issueService = c.get("issueService");
+  const lockService = c.get("epicLockService");
+  const workspaceId = c.get("workspaceId");
   const id = c.req.param("id");
 
   const existing = await issueService.getById(id);
   if (!existing) {
     notFound(`Issue not found: ${id}`);
+  }
+
+  // Epic lock enforcement via X-Session-Id header
+  const sessionId = c.req.header("X-Session-Id");
+  if (sessionId && existing) {
+    const lockStatus = await lockService.check(existing.epicId);
+
+    if (lockStatus.locked && lockStatus.lock!.sessionId !== sessionId) {
+      // Locked by a different session
+      return c.json(
+        {
+          error: {
+            code: "LOCKED",
+            message: `Epic is locked by another session`,
+          },
+          data: {
+            heldBy: {
+              sessionId: lockStatus.lock!.sessionId,
+              agentName: lockStatus.lock!.agentName,
+              expiresAt: lockStatus.lock!.expiresAt,
+            },
+          },
+        },
+        423,
+      );
+    }
+
+    if (!lockStatus.locked) {
+      // Auto-acquire lock for this session
+      const agentName = c.req.header("X-Agent-Name") ?? "unknown";
+      await lockService.acquire({
+        workspaceId,
+        epicId: existing.epicId,
+        sessionId,
+        agentName,
+      });
+    }
   }
 
   const issue = await issueService.updateStatus(id, "in_progress");

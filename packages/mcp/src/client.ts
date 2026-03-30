@@ -246,6 +246,59 @@ export class RavenclawApiClient {
     );
   }
 
+  // ── Locks ──────────────────────────────────────────────────────────
+
+  async acquireLock(
+    epicId: string,
+    input: { sessionId: string; agentName?: string; ttlMinutes?: number; metadata?: Record<string, unknown> },
+  ): Promise<unknown> {
+    return this.request<unknown>(
+      "POST",
+      `/epics/${encodeURIComponent(epicId)}/lock`,
+      input,
+    );
+  }
+
+  async releaseLock(
+    epicId: string,
+    input: { sessionId: string },
+  ): Promise<unknown> {
+    return this.request<unknown>(
+      "DELETE",
+      `/epics/${encodeURIComponent(epicId)}/lock`,
+      input,
+    );
+  }
+
+  async forceReleaseLock(epicId: string): Promise<unknown> {
+    return this.request<unknown>(
+      "DELETE",
+      `/epics/${encodeURIComponent(epicId)}/lock/force`,
+    );
+  }
+
+  async checkLock(epicId: string): Promise<unknown> {
+    return this.request<unknown>(
+      "GET",
+      `/epics/${encodeURIComponent(epicId)}/lock`,
+    );
+  }
+
+  async heartbeatLock(
+    epicId: string,
+    input: { sessionId: string; ttlMinutes?: number },
+  ): Promise<unknown> {
+    return this.request<unknown>(
+      "POST",
+      `/epics/${encodeURIComponent(epicId)}/lock/heartbeat`,
+      input,
+    );
+  }
+
+  async listLocks(): Promise<unknown[]> {
+    return this.request<unknown[]>("GET", "/locks");
+  }
+
   // ── Comments ───────────────────────────────────────────────────────
 
   async listComments(

@@ -11,6 +11,7 @@ import {
   OntologyService,
   SearchService,
   CommentService,
+  EpicLockService,
 } from "@ravenclaw/core";
 import { createApp } from "./app.js";
 
@@ -35,6 +36,7 @@ const contextService = new ContextService(db);
 const ontologyService = new OntologyService(db);
 const searchService = new SearchService(db);
 const commentService = new CommentService(db);
+const epicLockService = new EpicLockService(db);
 
 // Create the Hono application
 const app = createApp({
@@ -47,6 +49,7 @@ const app = createApp({
   ontologyService,
   searchService,
   commentService,
+  epicLockService,
 });
 
 // Start the server

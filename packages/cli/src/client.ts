@@ -11,6 +11,9 @@ import type {
   Dependency,
   SearchResult,
   Comment,
+  EpicLock,
+  LockResult,
+  LockStatus,
   ApiErrorResponse,
   EpicStatus,
   IssueStatus,
@@ -366,6 +369,32 @@ export class RavenclawClient {
 
   async getDependencies(entityType: EntityType, entityId: string): Promise<Dependency[]> {
     return this.get<Dependency[]>(`/dependencies/${encodeURIComponent(entityType)}/${encodeURIComponent(entityId)}`);
+  }
+
+  // ── Locks ─────────────────────────────────────────────────────────
+
+  async acquireLock(epicId: string, input: { sessionId: string; agentName?: string; ttlMinutes?: number; metadata?: Record<string, unknown> }): Promise<LockResult> {
+    return this.post<LockResult>(`/epics/${encodeURIComponent(epicId)}/lock`, input);
+  }
+
+  async releaseLock(epicId: string, sessionId: string): Promise<{ released: boolean }> {
+    return this.request<{ released: boolean }>('DELETE', `/epics/${encodeURIComponent(epicId)}/lock`, { sessionId });
+  }
+
+  async forceReleaseLock(epicId: string): Promise<{ released: boolean }> {
+    return this.request<{ released: boolean }>('DELETE', `/epics/${encodeURIComponent(epicId)}/lock/force`);
+  }
+
+  async checkLock(epicId: string): Promise<LockStatus> {
+    return this.get<LockStatus>(`/epics/${encodeURIComponent(epicId)}/lock`);
+  }
+
+  async heartbeatLock(epicId: string, sessionId: string, ttlMinutes?: number): Promise<{ refreshed: boolean }> {
+    return this.post<{ refreshed: boolean }>(`/epics/${encodeURIComponent(epicId)}/lock/heartbeat`, { sessionId, ttlMinutes });
+  }
+
+  async listLocks(): Promise<EpicLock[]> {
+    return this.get<EpicLock[]>('/locks');
   }
 
   // ── Comments ──────────────────────────────────────────────────────

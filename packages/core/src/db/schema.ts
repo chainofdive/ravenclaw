@@ -420,6 +420,37 @@ export const ontologyRelationsRelations = relations(
   }),
 );
 
+// ─── Epic Locks ─────────────────────────────────────────────────────────────
+
+export const epicLocks = pgTable("epic_locks", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  epicId: uuid("epic_id")
+    .notNull()
+    .references(() => epics.id, { onDelete: "cascade" })
+    .unique(),
+  sessionId: varchar("session_id", { length: 255 }).notNull(),
+  agentName: varchar("agent_name", { length: 255 }).notNull().default("unknown"),
+  acquiredAt: timestamp("acquired_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
+});
+
+export const epicLocksRelations = relations(epicLocks, ({ one }) => ({
+  workspace: one(workspaces, {
+    fields: [epicLocks.workspaceId],
+    references: [workspaces.id],
+  }),
+  epic: one(epics, {
+    fields: [epicLocks.epicId],
+    references: [epics.id],
+  }),
+}));
+
 // ─── Comments ───────────────────────────────────────────────────────────────
 
 export const comments = pgTable("comments", {

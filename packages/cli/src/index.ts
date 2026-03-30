@@ -10,6 +10,7 @@ import { createContextCommand } from './commands/context.js';
 import { createOntologyCommand } from './commands/ontology.js';
 import { createSearchCommand } from './commands/search.js';
 import { createCommentCommand } from './commands/comment.js';
+import { createLockCommand } from './commands/lock.js';
 
 const program = new Command();
 
@@ -30,6 +31,7 @@ program.addCommand(createContextCommand());
 program.addCommand(createOntologyCommand());
 program.addCommand(createSearchCommand());
 program.addCommand(createCommentCommand());
+program.addCommand(createLockCommand());
 
 // Global error handling for uncaught issues
 program.exitOverride();
