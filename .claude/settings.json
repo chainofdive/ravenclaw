@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "ravenclaw": {
+      "command": "node",
+      "args": ["packages/mcp/dist/index.js"],
+      "cwd": "/Users/gimtaeeun/ClaudeProjects/ravenclaw",
+      "env": {
+        "RAVENCLAW_API_URL": "http://localhost:3000",
+        "RAVENCLAW_API_KEY": "rvc_sk_test1234567890abcdef"
+      }
+    }
+  }
+}

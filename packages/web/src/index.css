@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-display: "Fraunces", serif;
+  --color-surface: #FAFAF8;
+  --color-surface-card: #FFFFFF;
+  --color-accent: #0D9488;
+  --color-accent-light: #CCFBF1;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-surface);
+}
