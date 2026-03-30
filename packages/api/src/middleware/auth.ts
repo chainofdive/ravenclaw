@@ -17,9 +17,9 @@ export const authMiddleware = createMiddleware<AppEnv>(async (c, next) => {
     unauthorized("Missing Authorization header");
   }
 
-  const match = authorization!.match(/^Bearer\s+(rc_.+)$/);
+  const match = authorization!.match(/^Bearer\s+(.+)$/);
   if (!match) {
-    unauthorized("Invalid Authorization header format. Expected: Bearer rc_...");
+    unauthorized("Invalid Authorization header format. Expected: Bearer <api-key>");
   }
 
   const apiKey = match![1];
@@ -30,13 +30,12 @@ export const authMiddleware = createMiddleware<AppEnv>(async (c, next) => {
 
   try {
     const result = await db.execute(
-      sql`SELECT workspace_id, expires_at, revoked_at FROM api_keys WHERE key_hash = ${keyHash} LIMIT 1`
+      sql`SELECT workspace_id, expires_at FROM api_keys WHERE key_hash = ${keyHash} LIMIT 1`
     );
 
     const rows = result as unknown as Array<{
       workspace_id: string;
       expires_at: string | null;
-      revoked_at: string | null;
     }>;
 
     if (!rows || rows.length === 0) {
@@ -44,10 +43,6 @@ export const authMiddleware = createMiddleware<AppEnv>(async (c, next) => {
     }
 
     const row = rows[0];
-
-    if (row.revoked_at) {
-      unauthorized("API key has been revoked");
-    }
 
     if (row.expires_at && new Date(row.expires_at) < new Date()) {
       unauthorized("API key has expired");
@@ -59,6 +54,7 @@ export const authMiddleware = createMiddleware<AppEnv>(async (c, next) => {
     if (err instanceof Error && err.name === "ApiHttpError") {
       throw err;
     }
+    console.error("[AUTH] DB query error:", err);
     unauthorized("Failed to validate API key");
   }
 

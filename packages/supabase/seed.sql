@@ -28,7 +28,7 @@ INSERT INTO workspaces (id, name, slug, description, settings) VALUES
 INSERT INTO api_keys (id, workspace_id, key_hash, key_prefix, name, scopes) VALUES
   ('b0000000-0000-0000-0000-000000000001',
    'a0000000-0000-0000-0000-000000000001',
-   'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2',
+   '786296d36bb6f93ba1679d574008e91e2e57760e5cdb2a0b1b08537b9bcec647',
    'rvc_sk_t',
    'Development API Key',
    ARRAY['read', 'write', 'admin']);
