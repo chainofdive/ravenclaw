@@ -9,6 +9,7 @@ import { createWikiCommand } from './commands/wiki.js';
 import { createContextCommand } from './commands/context.js';
 import { createOntologyCommand } from './commands/ontology.js';
 import { createSearchCommand } from './commands/search.js';
+import { createCommentCommand } from './commands/comment.js';
 
 const program = new Command();
 
@@ -28,6 +29,7 @@ program.addCommand(createWikiCommand());
 program.addCommand(createContextCommand());
 program.addCommand(createOntologyCommand());
 program.addCommand(createSearchCommand());
+program.addCommand(createCommentCommand());
 
 // Global error handling for uncaught issues
 program.exitOverride();

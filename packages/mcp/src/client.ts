@@ -245,4 +245,43 @@ export class RavenclawApiClient {
       `/dependencies/${encodeURIComponent(id)}`,
     );
   }
+
+  // ── Comments ───────────────────────────────────────────────────────
+
+  async listComments(
+    entityType: string,
+    entityId: string,
+  ): Promise<unknown[]> {
+    const params = new URLSearchParams({
+      entity_type: entityType,
+      entity_id: entityId,
+    });
+    return this.request<unknown[]>("GET", `/comments?${params.toString()}`);
+  }
+
+  async addComment(input: {
+    entityType: string;
+    entityId: string;
+    content: string;
+    author?: string;
+  }): Promise<unknown> {
+    return this.request<unknown>("POST", "/comments", input);
+  }
+
+  async deleteComment(id: string): Promise<unknown> {
+    return this.request<unknown>(
+      "DELETE",
+      `/comments/${encodeURIComponent(id)}`,
+    );
+  }
+
+  async getRecentComments(limit?: number): Promise<unknown[]> {
+    const params = new URLSearchParams();
+    if (limit) params.set("limit", String(limit));
+    // Use workspace-level endpoint via query
+    return this.request<unknown[]>(
+      "GET",
+      `/comments/recent${params.toString() ? `?${params.toString()}` : ""}`,
+    );
+  }
 }

@@ -10,6 +10,7 @@ import type {
   OntologyGraph,
   Dependency,
   SearchResult,
+  Comment,
   ApiErrorResponse,
   EpicStatus,
   IssueStatus,
@@ -365,5 +366,28 @@ export class RavenclawClient {
 
   async getDependencies(entityType: EntityType, entityId: string): Promise<Dependency[]> {
     return this.get<Dependency[]>(`/dependencies/${encodeURIComponent(entityType)}/${encodeURIComponent(entityId)}`);
+  }
+
+  // ── Comments ──────────────────────────────────────────────────────
+
+  async listComments(entityType: EntityType, entityId: string): Promise<Comment[]> {
+    return this.get<Comment[]>('/comments', {
+      entity_type: entityType,
+      entity_id: entityId,
+    });
+  }
+
+  async addComment(input: { entityType: EntityType; entityId: string; content: string; author?: string }): Promise<Comment> {
+    return this.post<Comment>('/comments', input);
+  }
+
+  async deleteComment(id: string): Promise<void> {
+    return this.delete<void>(`/comments/${encodeURIComponent(id)}`);
+  }
+
+  async getRecentComments(limit?: number): Promise<Comment[]> {
+    return this.get<Comment[]>('/comments/recent', {
+      limit: limit?.toString(),
+    });
   }
 }

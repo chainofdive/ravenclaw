@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api, type Issue } from '../lib/api';
 import { StatusBadge } from '../components/StatusBadge';
 import { PriorityBadge } from '../components/PriorityBadge';
+import { CommentPanel } from '../components/CommentPanel';
 
 const statuses = ['all', 'todo', 'in_progress', 'done', 'backlog', 'cancelled'];
 const priorities = ['all', 'critical', 'high', 'medium', 'low'];
@@ -12,6 +13,7 @@ export function Issues() {
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [error, setError] = useState('');
+  const [expandedIssue, setExpandedIssue] = useState<string | null>(null);
 
   useEffect(() => {
     api.listIssues().then(setIssues).catch((e) => setError(e.message));
@@ -75,9 +77,20 @@ export function Issues() {
             </thead>
             <tbody>
               {filtered.map((issue) => (
-                <tr key={issue.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                <tr
+                  key={issue.id}
+                  className="border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer"
+                  onClick={() => setExpandedIssue(expandedIssue === issue.id ? null : issue.id)}
+                >
                   <td className="px-4 py-2.5 font-mono text-slate-400">{issue.key}</td>
-                  <td className="px-4 py-2.5 text-slate-800">{issue.title}</td>
+                  <td className="px-4 py-2.5 text-slate-800">
+                    {issue.title}
+                    {expandedIssue === issue.id && (
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <CommentPanel entityType="issue" entityId={issue.id} />
+                      </div>
+                    )}
+                  </td>
                   <td className="px-4 py-2.5"><StatusBadge status={issue.status} /></td>
                   <td className="px-4 py-2.5"><PriorityBadge priority={issue.priority} /></td>
                   <td className="px-4 py-2.5">

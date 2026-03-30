@@ -158,6 +158,26 @@ Add to `.claude/settings.json`:
 | `rebuild_ontology` | Trigger ontology rebuild |
 | `search` | Unified search across all entities |
 
+## Claude Code Skill
+
+Ravenclaw includes a Claude Code skill for quick context loading. Copy the skill to your project:
+
+```bash
+cp -r skills/ravenclaw-context .claude/skills/
+```
+
+Then invoke with `/ravenclaw-context` in Claude Code to load your work context at the start of any session.
+
+### Custom Agent
+
+A custom agent definition is also provided:
+
+```bash
+cp .claude/agents/ravenclaw.md your-project/.claude/agents/
+```
+
+This configures Claude Code to automatically work with Ravenclaw for task management.
+
 ## API Endpoints
 
 All endpoints are under `/api/v1` and require an API key via the `Authorization` header.

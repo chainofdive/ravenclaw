@@ -5,6 +5,7 @@ import { StatusBadge } from '../components/StatusBadge';
 import { PriorityBadge } from '../components/PriorityBadge';
 import { ProgressBar } from '../components/ProgressBar';
 import { EpicTreeGraph, type GraphData } from '../components/EpicTreeGraph';
+import { CommentPanel } from '../components/CommentPanel';
 
 type ViewMode = 'list' | 'graph';
 
@@ -167,6 +168,7 @@ export function Epics() {
                   ) : (
                     <p className="text-xs text-slate-400">No issues</p>
                   )}
+                  <CommentPanel entityType="epic" entityId={epic.id} />
                 </div>
               )}
             </Card>

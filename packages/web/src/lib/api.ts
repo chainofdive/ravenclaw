@@ -10,9 +10,14 @@ export function setApiKey(key: string) {
   localStorage.setItem(API_KEY_STORAGE, key);
 }
 
-async function apiFetch<T>(path: string): Promise<T> {
+async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: { Authorization: `Bearer ${getApiKey()}` },
+    ...options,
+    headers: {
+      Authorization: `Bearer ${getApiKey()}`,
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
   });
   if (!res.ok) {
     throw new Error(`API error: ${res.status} ${res.statusText}`);
@@ -111,6 +116,16 @@ export interface SearchResult {
   updatedAt: string;
 }
 
+export interface Comment {
+  id: string;
+  entityType: string;
+  entityId: string;
+  content: string;
+  author: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Dependency {
   id: string;
   sourceType: string;
@@ -130,4 +145,17 @@ export const api = {
   search: (q: string) => apiFetch<SearchResult[]>(`/search?q=${encodeURIComponent(q)}`),
   getDependencies: (entityType: string, entityId: string) =>
     apiFetch<Dependency[]>(`/dependencies?entity_type=${entityType}&entity_id=${entityId}`),
+
+  // Comments
+  listComments: (entityType: string, entityId: string) =>
+    apiFetch<Comment[]>(`/comments?entity_type=${encodeURIComponent(entityType)}&entity_id=${encodeURIComponent(entityId)}`),
+  addComment: (input: { entityType: string; entityId: string; content: string; author?: string }) =>
+    apiFetch<Comment>('/comments', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  deleteComment: (id: string) =>
+    apiFetch<{ deleted: boolean }>(`/comments/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    }),
 };

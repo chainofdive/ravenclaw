@@ -7,6 +7,7 @@ import {
   ContextService,
   OntologyService,
   SearchService,
+  CommentService,
 } from "@ravenclaw/core";
 import { errorHandler } from "./middleware/error.js";
 import { requestLogger } from "./middleware/logging.js";
@@ -19,6 +20,7 @@ import contextRoutes from "./routes/context.js";
 import ontologyRoutes from "./routes/ontology.js";
 import searchRoutes from "./routes/search.js";
 import dependencyRoutes from "./routes/dependencies.js";
+import commentRoutes from "./routes/comments.js";
 
 /**
  * Application environment type for Hono context.
@@ -35,6 +37,7 @@ export type AppEnv = {
     contextService: ContextService;
     ontologyService: OntologyService;
     searchService: SearchService;
+    commentService: CommentService;
   };
 };
 
@@ -47,6 +50,7 @@ export interface AppServices {
   contextService: ContextService;
   ontologyService: OntologyService;
   searchService: SearchService;
+  commentService: CommentService;
 }
 
 /**
@@ -73,6 +77,7 @@ export function createApp(services: AppServices): Hono<AppEnv> {
     c.set("contextService", services.contextService);
     c.set("ontologyService", services.ontologyService);
     c.set("searchService", services.searchService);
+    c.set("commentService", services.commentService);
     await next();
   });
 
@@ -88,6 +93,7 @@ export function createApp(services: AppServices): Hono<AppEnv> {
   app.route("/api/v1/ontology", ontologyRoutes);
   app.route("/api/v1/search", searchRoutes);
   app.route("/api/v1/dependencies", dependencyRoutes);
+  app.route("/api/v1/comments", commentRoutes);
 
   // 404 catch-all
   app.notFound((c) => {

@@ -10,6 +10,7 @@ import {
   ContextService,
   OntologyService,
   SearchService,
+  CommentService,
 } from "@ravenclaw/core";
 import { createApp } from "./app.js";
 
@@ -33,6 +34,7 @@ const wikiService = new WikiService(db);
 const contextService = new ContextService(db);
 const ontologyService = new OntologyService(db);
 const searchService = new SearchService(db);
+const commentService = new CommentService(db);
 
 // Create the Hono application
 const app = createApp({
@@ -44,6 +46,7 @@ const app = createApp({
   contextService,
   ontologyService,
   searchService,
+  commentService,
 });
 
 // Start the server

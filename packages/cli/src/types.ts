@@ -163,6 +163,17 @@ export interface SearchResult {
   url?: string;
 }
 
+export interface Comment {
+  id: string;
+  workspaceId: string;
+  entityType: EntityType;
+  entityId: string;
+  content: string;
+  author: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ApiErrorResponse {
   error: {
     code: string;

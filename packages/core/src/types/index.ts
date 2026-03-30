@@ -10,6 +10,7 @@ import type {
   ontologyConcepts,
   ontologyRelations,
   activityLog,
+  comments,
 } from "../db/schema.js";
 
 // ─── Drizzle Inferred Types ─────────────────────────────────────────────────
@@ -43,6 +44,9 @@ export type NewOntologyRelation = typeof ontologyRelations.$inferInsert;
 
 export type ActivityLogEntry = typeof activityLog.$inferSelect;
 export type NewActivityLogEntry = typeof activityLog.$inferInsert;
+
+export type Comment = typeof comments.$inferSelect;
+export type NewComment = typeof comments.$inferInsert;
 
 // ─── Enum Value Types ───────────────────────────────────────────────────────
 
@@ -275,6 +279,16 @@ export const CreateActivityLogInput = z.object({
   context: z.record(z.unknown()).optional(),
 });
 export type CreateActivityLogInput = z.infer<typeof CreateActivityLogInput>;
+
+// Comment
+export const CreateCommentInput = z.object({
+  workspaceId: z.string().uuid(),
+  entityType: z.enum(["epic", "issue", "wiki_page", "concept"]),
+  entityId: z.string().uuid(),
+  content: z.string().min(1),
+  author: z.string().max(255).optional(),
+});
+export type CreateCommentInput = z.infer<typeof CreateCommentInput>;
 
 // ─── Filter Types ───────────────────────────────────────────────────────────
 

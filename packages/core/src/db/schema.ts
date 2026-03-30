@@ -107,6 +107,7 @@ export const workspacesRelations = relations(workspaces, ({ many }) => ({
   ontologyConcepts: many(ontologyConcepts),
   ontologyRelations: many(ontologyRelations),
   activityLog: many(activityLog),
+  comments: many(comments),
 }));
 
 // ─── API Keys ────────────────────────────────────────────────────────────────
@@ -418,6 +419,33 @@ export const ontologyRelationsRelations = relations(
     }),
   }),
 );
+
+// ─── Comments ───────────────────────────────────────────────────────────────
+
+export const comments = pgTable("comments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  entityType: entityTypeEnum("entity_type").notNull(),
+  entityId: uuid("entity_id").notNull(),
+  content: text("content").notNull(),
+  author: varchar("author", { length: 255 }).notNull().default("user"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+export const commentsRelations = relations(comments, ({ one }) => ({
+  workspace: one(workspaces, {
+    fields: [comments.workspaceId],
+    references: [workspaces.id],
+  }),
+}));
 
 // ─── Activity Log ────────────────────────────────────────────────────────────
 
