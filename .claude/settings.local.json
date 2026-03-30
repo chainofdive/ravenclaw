@@ -5,7 +5,23 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git push:*)",
-      "Bash(pnpm run:*)"
+      "Bash(pnpm run:*)",
+      "Bash(docker ps:*)",
+      "Bash(lsof -ti:3000)",
+      "Bash(pnpm --filter @ravenclaw/cli build)",
+      "Bash(chmod +x packages/cli/dist/index.js)",
+      "Bash(pnpm link:*)",
+      "Bash(npm link:*)",
+      "Bash(rc --version)",
+      "Bash(rc --help)",
+      "Bash(ravenclaw --help)",
+      "Bash(ln -sf /Users/gimtaeeun/ClaudeProjects/ravenclaw/packages/cli/dist/index.js /usr/local/bin/rc)",
+      "Bash(ln -sf /Users/gimtaeeun/ClaudeProjects/ravenclaw/packages/cli/dist/index.js /opt/homebrew/bin/rc)",
+      "Bash(rc epic:*)",
+      "Bash(curl -s -H \"Authorization: Bearer rvc_sk_test1234567890abcdef\" http://localhost:3000/api/v1/epics)",
+      "Bash(python3 -c \"import sys,json; print\\(json.dumps\\(json.load\\(sys.stdin\\), indent=2\\)[:300]\\)\")",
+      "Bash(rc issue:*)",
+      "Bash(rc context:*)"
     ]
   }
 }

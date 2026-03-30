@@ -30,13 +30,12 @@ export function formatTable<T>(data: T[], columns: ColumnDef<T>[]): string {
     return chalk.gray('  No results found.');
   }
 
+  const hasWidths = columns.some((c) => c.width != null);
   const table = new Table({
     head: columns.map((c) => chalk.bold(c.header)),
     style: { head: [], border: [] },
     wordWrap: true,
-    colWidths: columns.map((c) => c.width).some(Boolean)
-      ? columns.map((c) => c.width ?? null)
-      : undefined,
+    ...(hasWidths ? { colWidths: columns.map((c) => c.width) as (number | null)[] } : {}),
   });
 
   for (const row of data) {

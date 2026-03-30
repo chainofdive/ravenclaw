@@ -197,7 +197,8 @@ export class RavenclawClient {
       return undefined as T;
     }
 
-    return (await response.json()) as T;
+    const json = (await response.json()) as Record<string, unknown>;
+    return (json.data !== undefined ? json.data : json) as T;
   }
 
   private get<T>(path: string, params?: Record<string, string | undefined>): Promise<T> {
