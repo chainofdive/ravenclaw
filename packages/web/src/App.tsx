@@ -3,10 +3,9 @@ import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { Dashboard } from './pages/Dashboard';
 import { Projects } from './pages/Projects';
-import { Epics } from './pages/Epics';
 import { Issues } from './pages/Issues';
-import { Wiki } from './pages/Wiki';
 import { Agents } from './pages/Agents';
+import { Wiki } from './pages/Wiki';
 import { Ontology } from './pages/Ontology';
 import { Context } from './pages/Context';
 
@@ -21,7 +20,6 @@ export default function App() {
             <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/projects" element={<Projects />} />
-              <Route path="/epics" element={<Epics />} />
               <Route path="/issues" element={<Issues />} />
               <Route path="/agents" element={<Agents />} />
               <Route path="/wiki" element={<Wiki />} />

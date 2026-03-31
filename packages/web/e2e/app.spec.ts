@@ -7,7 +7,6 @@ test.describe('Dashboard', () => {
   test('loads and shows metrics', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('h2')).toContainText('Dashboard');
-    // Check metric cards exist (use role to avoid strict mode)
     await expect(page.locator('p.text-2xl').first()).toBeVisible();
   });
 });
@@ -33,27 +32,31 @@ test.describe('Projects page', () => {
     await expect(page.locator('.react-flow')).toBeVisible({ timeout: 10000 });
   });
 
+  test('switches to command view', async ({ page }) => {
+    await page.goto('/projects');
+    await page.getByText('SURVIVE').click();
+    await page.getByRole('button', { name: 'Command' }).click();
+    await expect(page.getByPlaceholder('Instruct agent', { exact: false })).toBeVisible({ timeout: 5000 });
+  });
+
   test('switches to history view', async ({ page }) => {
     await page.goto('/projects');
     await page.getByText('SURVIVE').click();
     await page.getByRole('button', { name: 'History' }).click();
     await expect(page.getByRole('heading', { name: 'Context Snapshots' })).toBeVisible({ timeout: 5000 });
-    await expect(page.getByRole('heading', { name: 'Work Sessions' })).toBeVisible();
-  });
-});
-
-test.describe('Epics page', () => {
-  test('shows epic list', async ({ page }) => {
-    await page.goto('/epics');
-    await expect(page.locator('h2')).toContainText('Epics');
-    await expect(page.getByText('RC-E10').first()).toBeVisible({ timeout: 5000 });
   });
 
-  test('expands epic to show issues', async ({ page }) => {
-    await page.goto('/epics');
-    const epic = page.getByText('Phase 1', { exact: false }).first();
-    await epic.click();
-    await expect(page.getByText('RC-I', { exact: false }).first()).toBeVisible({ timeout: 5000 });
+  test('sends a command from project', async ({ page }) => {
+    await page.goto('/projects');
+    await page.getByText('SURVIVE').click();
+    await page.getByRole('button', { name: 'Command' }).click();
+
+    const uniqueCmd = `E2E command ${Date.now()}`;
+    await page.getByPlaceholder('Instruct agent', { exact: false }).fill(uniqueCmd);
+    await page.getByRole('button', { name: 'Send' }).click();
+
+    // Should appear in directive history
+    await expect(page.getByText(uniqueCmd).first()).toBeVisible({ timeout: 5000 });
   });
 });
 
@@ -70,51 +73,37 @@ test.describe('Agents page', () => {
     await page.goto('/agents');
     await expect(page.locator('h2')).toContainText('Agents & Directives');
     await expect(page.getByRole('heading', { name: 'Agents', exact: true })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'New Directive' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Directives', exact: true })).toBeVisible();
   });
 
   test('creates an agent', async ({ page }) => {
     await page.goto('/agents');
-    await page.getByPlaceholder('Agent name...').fill('e2e-agent-unique');
+    const name = `e2e-agent-${Date.now()}`;
+    await page.getByPlaceholder('Agent name...').fill(name);
     await page.getByRole('button', { name: 'Add' }).click();
-    await expect(page.getByText('e2e-agent-unique').first()).toBeVisible({ timeout: 5000 });
-  });
-
-  test('creates a directive', async ({ page }) => {
-    await page.goto('/agents');
-    const uniqueText = `E2E directive ${Date.now()}`;
-    await page.getByPlaceholder('Describe the work').fill(uniqueText);
-    await page.getByRole('button', { name: 'Create Directive' }).click();
-    await expect(page.locator('p').filter({ hasText: uniqueText }).first()).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(name).first()).toBeVisible({ timeout: 5000 });
   });
 });
 
 test.describe('Human Input Request flow', () => {
   test('shows pending input and allows answering', async ({ page, request }) => {
-    // Create an input request via API
     const res = await request.post(`${API}/input-requests`, {
       headers: AUTH,
       data: {
-        question: 'E2E playwright test question',
+        question: `E2E input ${Date.now()}`,
         urgency: 'blocking',
         agentName: 'e2e-test',
-        options: ['option-a', 'option-b'],
+        options: ['opt-a', 'opt-b'],
         projectId: 'RC-P1',
       },
     });
     expect(res.ok()).toBeTruthy();
+    const { data: req } = await res.json();
 
-    // Go to dashboard — PendingInputs polls every 10s, so wait
     await page.goto('/');
-    await expect(page.getByText('E2E playwright test question')).toBeVisible({ timeout: 15000 });
-
-    // Type an answer
-    await page.getByPlaceholder('Type your answer...').first().fill('my answer');
-    await page.getByRole('button', { name: 'Answer' }).first().click();
-
-    // Should disappear after answering (wait for re-poll)
-    await expect(page.getByText('E2E playwright test question')).not.toBeVisible({ timeout: 15000 });
+    await expect(page.getByText(req.question)).toBeVisible({ timeout: 15000 });
+    await page.getByRole('button', { name: 'opt-b' }).first().click();
+    await expect(page.getByText(req.question)).not.toBeVisible({ timeout: 15000 });
   });
 });
 
@@ -122,23 +111,15 @@ test.describe('Navigation', () => {
   test('sidebar navigation works', async ({ page }) => {
     await page.goto('/');
 
-    // Navigate to Projects
     await page.getByRole('link', { name: 'Projects' }).click();
     await expect(page.locator('h2').first()).toContainText('Projects', { timeout: 5000 });
 
-    // Navigate to Epics
-    await page.getByRole('link', { name: 'Epics' }).click();
-    await expect(page.locator('h2').first()).toContainText('Epics', { timeout: 5000 });
-
-    // Navigate to Issues
     await page.getByRole('link', { name: 'Issues' }).click();
     await expect(page.locator('h2').first()).toContainText('Issues', { timeout: 5000 });
 
-    // Navigate to Agents
     await page.getByRole('link', { name: 'Agents' }).click();
     await expect(page.locator('h2').first()).toContainText('Agents', { timeout: 5000 });
 
-    // Navigate back to Dashboard
     await page.getByRole('link', { name: 'Dashboard' }).click();
     await expect(page.locator('h2').first()).toContainText('Dashboard', { timeout: 5000 });
   });

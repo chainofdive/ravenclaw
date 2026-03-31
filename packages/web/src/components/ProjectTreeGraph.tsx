@@ -101,10 +101,11 @@ function ProjectNode({ data }: NodeProps) {
 // --- Epic Node ---
 
 function EpicNode({ data }: NodeProps) {
-  const epic = data as { title: string; status: string; progress: number; key: string; issueCount: number; doneCount: number };
+  const epic = data as { title: string; status: string; progress: number; key: string; issueCount: number; doneCount: number; hasRunning: boolean };
   const badge = statusBadgeColors[epic.status] || 'bg-gray-100 text-gray-600';
+  const glowClass = epic.hasRunning ? 'ring-2 ring-blue-400 ring-opacity-75 animate-pulse' : '';
   return (
-    <div className="bg-white border-2 border-teal-500 rounded-xl shadow-md px-4 py-3" style={{ width: 280 }}>
+    <div className={`bg-white border-2 border-teal-500 rounded-xl shadow-md px-4 py-3 ${glowClass}`} style={{ width: 280 }}>
       <Handle type="target" position={Position.Top} className="!bg-teal-500 !w-2 !h-2" />
       <Handle type="source" position={Position.Bottom} className="!bg-teal-500 !w-2 !h-2" />
       <div className="flex items-center justify-between mb-1">
@@ -130,11 +131,12 @@ function EpicNode({ data }: NodeProps) {
 // --- Issue Node ---
 
 function IssueNode({ data }: NodeProps) {
-  const issue = data as { title: string; status: string; issueType: string; assignee: string | null; key: string };
+  const issue = data as { title: string; status: string; issueType: string; assignee: string | null; key: string; isRunning: boolean };
   const dotColor = statusDotColors[issue.status] || '#9ca3af';
+  const glowClass = issue.isRunning ? 'ring-2 ring-blue-400 ring-opacity-75 animate-pulse shadow-lg shadow-blue-200' : '';
   const typeColor = typeBadgeColors[issue.issueType] || 'bg-gray-50 text-gray-500';
   return (
-    <div className="bg-white border border-gray-200 rounded-lg shadow-sm px-3 py-2" style={{ width: 220 }}>
+    <div className={`bg-white border border-gray-200 rounded-lg shadow-sm px-3 py-2 ${glowClass}`} style={{ width: 220 }}>
       <Handle type="target" position={Position.Top} className="!bg-gray-400 !w-2 !h-2" />
       <Handle type="source" position={Position.Bottom} className="!bg-gray-400 !w-2 !h-2" />
       <div className="flex items-center gap-2 mb-1">
@@ -177,6 +179,7 @@ export function ProjectTreeGraph({ data }: { data: ProjectGraphData }) {
     // Epic nodes + edges
     project.epics.forEach((epic) => {
       const issues = epic.issues || [];
+      const hasRunning = issues.some((i) => i.status === 'in_progress');
       nodes.push({
         id: `epic-${epic.id}`,
         type: 'epicNode',
@@ -188,6 +191,7 @@ export function ProjectTreeGraph({ data }: { data: ProjectGraphData }) {
           key: epic.key,
           issueCount: issues.length,
           doneCount: issues.filter((i) => i.status === 'done').length,
+          hasRunning,
         },
       });
 
@@ -230,6 +234,7 @@ export function ProjectTreeGraph({ data }: { data: ProjectGraphData }) {
             issueType: issue.issueType,
             assignee: issue.assignee,
             key: issue.key,
+            isRunning: issue.status === 'in_progress',
           },
         });
 

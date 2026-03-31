@@ -8,8 +8,9 @@ import { CommentPanel } from '../components/CommentPanel';
 import { LockBadge } from '../components/LockBadge';
 import { ProjectTreeGraph, type ProjectGraphData } from '../components/ProjectTreeGraph';
 import { PendingInputs } from '../components/PendingInputs';
+import { CommandPanel } from '../components/CommandPanel';
 
-type ViewMode = 'list' | 'graph' | 'history';
+type ViewMode = 'list' | 'graph' | 'command' | 'history';
 
 export function Projects() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -124,6 +125,14 @@ export function Projects() {
               Graph
             </button>
             <button
+              onClick={() => setView('command')}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                view === 'command' ? 'bg-white text-teal-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              Command
+            </button>
+            <button
               onClick={() => setView('history')}
               className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
                 view === 'history' ? 'bg-white text-teal-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
@@ -229,6 +238,10 @@ export function Projects() {
               )}
               {!graphLoading && graphData && <ProjectTreeGraph data={graphData} />}
             </div>
+          )}
+
+          {selectedId === project.id && view === 'command' && (
+            <CommandPanel projectId={project.id} projectKey={project.key} />
           )}
 
           {selectedId === project.id && view === 'history' && (
