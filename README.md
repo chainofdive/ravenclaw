@@ -2,327 +2,212 @@
 
 **Personal work context management for AI-powered development.**
 
-Ravenclaw is a self-hosted system that gives AI coding agents persistent memory of your work context — epics, issues, wiki pages, and a knowledge ontology — so every conversation starts with full awareness of what you're building and why.
+Ravenclaw is a self-hosted system that gives AI coding agents persistent memory of your work context. It tracks projects, epics, issues, wiki pages, and a knowledge ontology — so every agent session starts with full awareness of what you're building, what's been done, and what to do next.
 
-## Features
+## Key Features
 
-- **Epic & Issue Tracking** — Hierarchical epics with child issues, status workflows, priorities, dependencies, and progress tracking
-- **Wiki** — Versioned knowledge base with slug-based addressing, tags, and linked epics/issues
-- **Knowledge Ontology** — Auto-extracted concept graph (technologies, domains, patterns) with typed relations
-- **MCP Server** — Model Context Protocol integration so AI agents can read/write your work context natively
-- **CLI (`rc`)** — Full-featured command-line interface for managing everything from the terminal
-- **REST API** — Hono-based API server with workspace isolation and API key authentication
-- **Context Dump** — Single-call endpoint that aggregates your entire active work context for agent handoff
-- **PostgreSQL + Supabase** — Direct Postgres or managed Supabase as your backing store
+- **Project → Epic → Issue** — Three-level hierarchy: projects (products/games), epics (phases/milestones), issues (tasks)
+- **Agent Orchestration** — Dispatch work to agents from a web UI, monitor progress in real-time, view execution logs
+- **Human-in-the-Loop** — Agents can ask questions; users answer via the web dashboard
+- **Context Handoff** — Agents save progress snapshots; new sessions pick up where the last one left off
+- **Dependency Graph** — Epic-to-epic and issue-to-issue dependencies with visual graph view
+- **MCP Server** — 40+ tools for AI agent integration via Model Context Protocol
+- **CLI (`rc`)** — Full command-line interface for all operations
+- **Web Dashboard** — Project management UI with graph view, command panel, and real-time monitoring
+- **Wiki & Ontology** — Versioned knowledge base with auto-extracted concept graph
+- **Session Locking** — Epic-level locks prevent concurrent agent conflicts
 
 ## Architecture
 
 ```
-                         +-----------+
-                         | PostgreSQL|
-                         +-----+-----+
-                               |
-                    +----------+----------+
-                    |                     |
-              +-----+------+    +--------+--------+
-              | @ravenclaw |    |   Supabase      |
-              |    /core   |    |   (optional)    |
-              +-----+------+    +-----------------+
-                    |
-       +------------+------------+
-       |            |            |
-+------+---+ +-----+----+ +----+------+
-| @ravenclaw| |@ravenclaw| |@ravenclaw |
-|   /api    | |  /cli    | |   /mcp    |
-+------+---+ +-----+----+ +----+------+
-       |            |            |
-   REST API     `rc` CLI    MCP stdio
-  (Hono)      (Commander)   (AI agents)
+┌─────────────┐
+│ Web Dashboard│  React + Tailwind + ReactFlow
+└──────┬───────┘
+       │
+┌──────┴───────┐     ┌──────────┐     ┌──────────┐
+│  API Server  │────│ PostgreSQL│     │  AI Agent │
+│  (Hono)      │     └──────────┘     │           │
+└──┬───┬───┬───┘                      └─────┬─────┘
+   │   │   │                                │
+   │   │   └── Process Manager ─────────────┘
+   │   │       (spawn/monitor claude)
+   │   │
+   │   └── REST API (/api/v1/*)
+   │
+   └── SSE (/api/v1/sse/logs/*)
+        (real-time log streaming)
+
+┌──────────┐     ┌──────────┐
+│ MCP Server│     │ CLI (rc) │
+│ (stdio)   │     │(Commander)│
+└──────────┘     └──────────┘
 ```
 
 | Package | Description |
 |---------|-------------|
-| `@ravenclaw/core` | Database schema (Drizzle ORM), services, types, and validation |
-| `@ravenclaw/api` | REST API server built on Hono with workspace-scoped endpoints |
-| `@ravenclaw/cli` | Terminal interface (`rc` command) using Commander.js |
-| `@ravenclaw/mcp` | MCP server for AI agent integration via stdio transport |
+| `@ravenclaw/core` | DB schema (Drizzle ORM), services, types, validation |
+| `@ravenclaw/api` | Hono REST API + Process Manager + SSE streaming |
+| `@ravenclaw/cli` | Terminal interface (`rc` command) |
+| `@ravenclaw/mcp` | MCP server for AI agent integration (40+ tools) |
+| `@ravenclaw/web` | React web dashboard with graph view and command panel |
 
-## Plugin Installation (Recommended)
+## Data Model
 
-Install Ravenclaw as a Claude Code plugin for the easiest setup:
-
-### 1. Add the marketplace
 ```
-/plugin marketplace add chainofdive/ravenclaw
-```
-
-### 2. Install the plugin
-```
-/plugin install ravenclaw@ravenclaw-marketplace
-```
-
-You'll be prompted for:
-- **API URL**: Your Ravenclaw API server (e.g., `http://localhost:3000`)
-- **API Key**: Your Ravenclaw API key
-
-### 3. Start using
-```
-/ravenclaw-context
+Workspace
+  └─ Project (RC-P1: SURVIVE)          ← product/game/campaign
+       ├─ Epic (RC-E10: Phase 1)       ← phase/milestone (depends_on other epics)
+       │    ├─ Issue (RC-I26: Card data)  ← individual task
+       │    └─ Issue (RC-I27: Deck mgr)   ← depends_on RC-I26
+       ├─ Epic (RC-E11: Phase 2)       ← depends_on RC-E10
+       │    └─ Issue (RC-I35: Rounds)
+       └─ ...
 ```
 
-This installs the MCP server (19+ tools), skill, and custom agent automatically.
+Additional entities: Wiki pages, Ontology (concepts + relations), Comments, Dependencies, Work sessions, Context snapshots, Human input requests, Agent workers, Work directives.
 
 ## Quick Start
 
-### Prerequisites
-
-- Node.js >= 22.0.0
-- pnpm >= 9.0.0
-- Docker (for PostgreSQL)
-
-### Setup
+See [docs/SETUP.md](./docs/SETUP.md) for detailed initial setup.
 
 ```bash
-# 1. Clone the repository
 git clone https://github.com/chainofdive/ravenclaw.git
 cd ravenclaw
+pnpm install && pnpm build
 
-# 2. Start PostgreSQL
+# Start PostgreSQL + run migrations
 docker-compose up -d
+pnpm db:push
 
-# 3. Configure environment
-cp .env.example .env
+# Start API server
+source .env && DATABASE_URL="$DATABASE_URL" node packages/api/dist/index.js
 
-# 4. Install dependencies and build
-pnpm install
-pnpm build
-
-# 5. Run database migrations
-pnpm db:migrate
-
-# 6. Start the API server
-pnpm --filter @ravenclaw/api start
-
-# 7. Configure the CLI
+# Configure CLI
 rc init
+
+# Start web dashboard (dev mode)
+pnpm --filter @ravenclaw/web dev
+```
+
+## Web Dashboard
+
+The dashboard provides a project-centric workspace:
+
+**Projects page (3-panel layout):**
+- Left: Project list (resizable)
+- Center: Content area with List / Graph / History tabs
+- Right: Command overlay panel (resizable, slide-in)
+
+**Features:**
+- Graph view with real-time animation (in_progress nodes glow)
+- Command panel: chat-style directive interface to instruct agents
+- History tab: context snapshots and work session timeline
+- Human input requests: pending questions from agents with answer UI
+- Agents page: register/manage agents, view directive queue
+
+## Agent Workflow
+
+See [docs/SESSION_GUIDE.md](./docs/SESSION_GUIDE.md) for full session guide.
+
+```
+Agent starts
+  │
+  ├─ get_latest_context(RC-P1)      ← load previous handoff
+  ├─ start_work_session(...)        ← record session
+  ├─ get_project(RC-P1)             ← see project tree
+  │
+  ├─ start_issue(RC-I26)            ← work on task
+  ├─ ... coding ...
+  ├─ complete_issue(RC-I26)
+  ├─ save_context(RC-P1, "...")     ← save progress
+  │
+  ├─ request_human_input(...)       ← ask user if needed
+  ├─ check_human_input(...)         ← poll for answer
+  │
+  └─ end_work_session(...)          ← close session
 ```
 
 ## CLI Reference
 
-The CLI is invoked as `rc` (or `ravenclaw`).
-
-| Command | Description |
-|---------|-------------|
-| `rc init` | Configure CLI connection (API URL, API key, workspace) |
-| `rc epic list` | List all epics (filter by `--status`, `--priority`) |
-| `rc epic create <title>` | Create a new epic |
-| `rc epic show <key>` | Show epic details with issue tree |
-| `rc epic update <key>` | Update epic fields (status, priority, title, etc.) |
-| `rc epic delete <key>` | Delete an epic |
-| `rc issue list` | List issues (filter by `--epic`, `--status`, `--priority`, `--assignee`) |
-| `rc issue create <epic-key> <title>` | Create an issue under an epic |
-| `rc issue show <key>` | Show issue details |
-| `rc issue update <key>` | Update issue fields |
-| `rc issue start <key>` | Set issue status to `in_progress` |
-| `rc issue done <key>` | Set issue status to `done` |
-| `rc wiki list` | List wiki pages |
-| `rc wiki read <slug>` | Read wiki page content |
-| `rc wiki write <slug>` | Create/update wiki page (reads content from stdin) |
-| `rc wiki search <query>` | Search wiki pages |
-| `rc wiki history <slug>` | Show version history |
-| `rc context` | Dump full work context (for agent handoff) |
-| `rc context changes --since <ISO>` | Show changes since a timestamp |
-| `rc ontology show` | Show knowledge graph concepts and relations |
-| `rc ontology rebuild` | Trigger full ontology rebuild |
-| `rc search <query>` | Unified search across epics, issues, and wiki |
-
-All list/show commands support `--format table|json|markdown`.
-
-## MCP Integration
-
-Add Ravenclaw to your Claude Code configuration to give AI agents access to your work context.
-
-Add to `.claude/settings.json`:
-
-```json
-{
-  "mcpServers": {
-    "ravenclaw": {
-      "command": "npx",
-      "args": ["ravenclaw-mcp"],
-      "env": {
-        "RAVENCLAW_API_URL": "http://localhost:3000",
-        "RAVENCLAW_API_KEY": "rc_your-api-key"
-      }
-    }
-  }
-}
-```
-
-### Available MCP Tools
-
-| Tool | Description |
-|------|-------------|
-| `get_work_context` | Full current work context (active epics, in-progress issues, recent activity) |
-| `get_work_context_summary` | Compact summary for token efficiency |
-| `list_epics` | List epics with optional filters |
-| `get_epic` | Get epic details with full issue tree |
-| `create_epic` | Create a new epic |
-| `update_epic` | Update an existing epic |
-| `list_issues` | List issues with filters |
-| `get_issue` | Get issue details |
-| `create_issue` | Create an issue under an epic |
-| `update_issue` | Update an existing issue |
-| `start_issue` | Mark issue as in_progress |
-| `complete_issue` | Mark issue as done |
-| `read_wiki` | Read a wiki page by slug |
-| `write_wiki` | Create or update a wiki page |
-| `search_wiki` | Search wiki pages |
-| `list_wiki_pages` | List all wiki pages |
-| `get_ontology` | Get the knowledge graph |
-| `rebuild_ontology` | Trigger ontology rebuild |
-| `search` | Unified search across all entities |
-
-## Claude Code Skill
-
-Ravenclaw includes a Claude Code skill for quick context loading. Copy the skill to your project:
-
 ```bash
-cp -r skills/ravenclaw-context .claude/skills/
+# Projects
+rc project list / show / create / update / delete
+
+# Epics
+rc epic list / show / create / update / delete
+
+# Issues
+rc issue list / create / start / done / delete
+
+# Context & Snapshots
+rc context                          # full work context
+rc context save RC-P1 "progress..." # save snapshot
+rc context latest RC-P1             # latest snapshot
+rc context history RC-P1            # snapshot history
+
+# Sessions
+rc session start / end / list
+
+# Other
+rc wiki list / search
+rc search "keyword"
+rc comment list / add
+rc lock list / acquire / release
+rc ontology show / rebuild
 ```
 
-Then invoke with `/ravenclaw-context` in Claude Code to load your work context at the start of any session.
+## MCP Tools (40+)
 
-### Custom Agent
-
-A custom agent definition is also provided:
-
-```bash
-cp .claude/agents/ravenclaw.md your-project/.claude/agents/
-```
-
-This configures Claude Code to automatically work with Ravenclaw for task management.
+| Category | Tools |
+|----------|-------|
+| **Projects** | list_projects, get_project, create_project, update_project, delete_project |
+| **Epics** | list_epics, get_epic, create_epic, update_epic, delete_epic |
+| **Issues** | list_issues, get_issue, create_issue, update_issue, delete_issue, start_issue, complete_issue |
+| **Dependencies** | add_dependency, list_dependencies, remove_dependency |
+| **Context** | get_work_context, get_work_context_summary |
+| **Sessions** | save_context, get_latest_context, list_context_snapshots, start_work_session, end_work_session, list_work_sessions |
+| **Human Input** | request_human_input, check_human_input, list_pending_inputs |
+| **Wiki** | list_wiki_pages, get_wiki_page, create_wiki_page, update_wiki_page |
+| **Other** | search, list_comments, add_comment, acquire_lock, release_lock, get_ontology, rebuild_ontology |
 
 ## API Endpoints
 
-All endpoints are under `/api/v1` and require an API key via the `Authorization` header.
+All endpoints under `/api/v1`, authenticated via `Authorization: Bearer <api-key>`.
 
-### Health
+| Group | Endpoints |
+|-------|-----------|
+| Health | `GET /health` |
+| Projects | `GET/POST /projects`, `GET/PUT/DELETE /projects/:id`, `GET /projects/:id/tree` |
+| Epics | `GET/POST /epics`, `GET/PUT/DELETE /epics/:id`, `GET /epics/:id/tree` |
+| Issues | `GET/POST /issues`, `GET/PUT/DELETE /issues/:id`, `POST /issues/:id/start\|done` |
+| Dependencies | `GET/POST /dependencies`, `DELETE /dependencies/:id` |
+| Wiki | `GET/POST /wiki`, `GET/PUT /wiki/:id`, `GET /wiki/:id/history` |
+| Context | `GET /context`, `GET /context/summary`, `GET /context/changes` |
+| Sessions | `POST /sessions`, `PUT /sessions/:id/end`, `GET /sessions` |
+| Snapshots | `POST /sessions/snapshots`, `GET /sessions/snapshots/latest`, `GET /sessions/snapshots` |
+| Input Requests | `POST /input-requests`, `GET /input-requests/waiting`, `PUT /input-requests/:id/answer` |
+| Agents | `GET/POST /agents`, `DELETE /agents/:id` |
+| Directives | `POST /agents/directives`, `POST /agents/directives/:id/dispatch`, `GET /agents/directives/:id/logs` |
+| SSE | `GET /sse/logs/:directiveId` (real-time log streaming) |
+| Locks | `POST/DELETE/GET /epics/:id/lock`, `GET /locks` |
+| Ontology | `GET /ontology/concepts`, `GET /ontology/graph`, `POST /ontology/rebuild` |
+| Search | `GET /search?q=` |
+| Comments | `GET/POST /comments`, `DELETE /comments/:id` |
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/v1/health` | Health check |
-
-### Epics
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/v1/epics` | List epics |
-| `POST` | `/api/v1/epics` | Create epic |
-| `GET` | `/api/v1/epics/:id` | Get epic |
-| `PUT` | `/api/v1/epics/:id` | Update epic |
-| `DELETE` | `/api/v1/epics/:id` | Delete epic |
-| `GET` | `/api/v1/epics/:id/tree` | Get epic with issue tree |
-| `GET` | `/api/v1/epics/:id/progress` | Get calculated progress |
-
-### Issues
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/v1/issues` | List issues |
-| `POST` | `/api/v1/issues` | Create issue |
-| `GET` | `/api/v1/issues/:id` | Get issue |
-| `PUT` | `/api/v1/issues/:id` | Update issue |
-| `DELETE` | `/api/v1/issues/:id` | Delete issue |
-| `POST` | `/api/v1/issues/:id/start` | Mark as in_progress |
-| `POST` | `/api/v1/issues/:id/done` | Mark as done |
-
-### Wiki
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/v1/wiki` | List wiki pages |
-| `POST` | `/api/v1/wiki` | Create wiki page |
-| `GET` | `/api/v1/wiki/by-slug/:slug` | Get page by slug |
-| `GET` | `/api/v1/wiki/:id` | Get page by ID |
-| `PUT` | `/api/v1/wiki/:id` | Update wiki page |
-| `GET` | `/api/v1/wiki/:id/history` | Get version history |
-
-### Context
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/v1/context` | Full aggregated work context |
-| `GET` | `/api/v1/context/summary` | Compact context summary |
-| `GET` | `/api/v1/context/changes?since=` | Changes since timestamp |
-
-### Ontology
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/v1/ontology/concepts` | List concepts |
-| `GET` | `/api/v1/ontology/graph` | Get full knowledge graph |
-| `POST` | `/api/v1/ontology/rebuild` | Trigger rebuild |
-
-### Dependencies
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/v1/dependencies` | Get dependencies for an entity |
-| `POST` | `/api/v1/dependencies` | Create dependency |
-| `DELETE` | `/api/v1/dependencies/:id` | Delete dependency |
-
-### Search
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/v1/search?q=` | Unified search |
-
-## Database
-
-Ravenclaw uses PostgreSQL as its primary data store, with [Drizzle ORM](https://orm.drizzle.team/) for schema management and queries.
-
-**Direct PostgreSQL** — Use the included `docker-compose.yml` for local development:
+## Testing
 
 ```bash
-docker-compose up -d
+# E2E tests (Playwright)
+cd packages/web && pnpm test:e2e
+
+# 14 tests covering: Dashboard, Projects (list/graph/command/history),
+# Issues, Agents, Human Input flow, Navigation, Wiki, Context
 ```
 
-**Supabase** — Optionally use a managed Supabase instance by setting `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in your `.env` file. See `.env.example` for details.
+## Documentation
 
-### Data Model
-
-- **Workspaces** — Top-level isolation boundary with settings and API keys
-- **Epics** — High-level work items with status, priority, hierarchy, and target dates
-- **Issues** — Granular tasks under epics with types (task/bug/spike/story), assignees, and time tracking
-- **Dependencies** — Cross-entity relationships (blocks, depends_on, relates_to)
-- **Wiki Pages** — Versioned documents with tags and entity linking
-- **Ontology** — Concepts (technology/domain/pattern/person/system) connected by typed relations
-- **Activity Log** — Audit trail of all entity changes
-
-## Development
-
-```bash
-# Install dependencies
-pnpm install
-
-# Build all packages
-pnpm build
-
-# Run all packages in dev mode (watch)
-pnpm dev
-
-# Type-check all packages
-pnpm typecheck
-
-# Run tests
-pnpm test
-
-# Clean build artifacts
-pnpm clean
-```
-
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed development guidelines.
+- [docs/SETUP.md](./docs/SETUP.md) — Initial installation and configuration
+- [docs/SESSION_GUIDE.md](./docs/SESSION_GUIDE.md) — How to connect agents to Ravenclaw
 
 ## License
 
