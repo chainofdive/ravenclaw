@@ -64,3 +64,26 @@ Use `save_context` MCP tool or `rc context save --project RC-P1 "..."`.
 - Read comments on your assigned issues — the user may have left feedback
 - Update issue status as you progress
 - Use `list_work_sessions(project_id)` to see who worked before you
+
+### Asking the User (Human-in-the-Loop)
+
+When you need a decision, clarification, or approval:
+
+```
+request_human_input(
+  question: "API 키 형식을 Base64로 할지 hex로 할지 결정 필요합니다",
+  project_id: "RC-P1",
+  issue_id: "RC-I26",
+  context: "현재 인증 모듈 구현 중. 두 형식 모두 기술적으로 가능하지만 기존 시스템과의 호환성 확인 필요",
+  options: ["Base64", "hex"],
+  urgency: "blocking"
+)
+```
+
+The user will see this in the Ravenclaw web dashboard and can answer. Then poll:
+
+```
+check_human_input(request_id: "<returned-id>")
+```
+
+Use `urgency: "blocking"` when you cannot proceed, `"normal"` when you can do other work while waiting.

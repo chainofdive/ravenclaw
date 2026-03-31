@@ -6,6 +6,7 @@ import type {
   epics,
   workSessions,
   contextSnapshots,
+  humanInputRequests,
   issues,
   dependencies,
   wikiPages,
@@ -63,6 +64,9 @@ export type NewWorkSession = typeof workSessions.$inferInsert;
 
 export type ContextSnapshot = typeof contextSnapshots.$inferSelect;
 export type NewContextSnapshot = typeof contextSnapshots.$inferInsert;
+
+export type HumanInputRequest = typeof humanInputRequests.$inferSelect;
+export type NewHumanInputRequest = typeof humanInputRequests.$inferInsert;
 
 // ─── Enum Value Types ───────────────────────────────────────────────────────
 
@@ -393,6 +397,31 @@ export const SaveContextSnapshotInput = z.object({
   metadata: z.record(z.unknown()).optional(),
 });
 export type SaveContextSnapshotInput = z.infer<typeof SaveContextSnapshotInput>;
+
+// ─── Human Input Request Inputs ─────────────────────────────────────────────
+
+export type InputRequestStatus = "waiting" | "answered" | "cancelled";
+export type InputUrgency = "blocking" | "normal" | "low";
+
+export const CreateHumanInputRequestInput = z.object({
+  workspaceId: z.string().uuid(),
+  projectId: z.string().uuid().nullable().optional(),
+  epicId: z.string().uuid().nullable().optional(),
+  issueId: z.string().uuid().nullable().optional(),
+  sessionId: z.string().max(255).optional(),
+  agentName: z.string().max(255).optional(),
+  urgency: z.enum(["blocking", "normal", "low"]).optional(),
+  question: z.string().min(1),
+  context: z.string().optional(),
+  options: z.array(z.string()).optional(),
+});
+export type CreateHumanInputRequestInput = z.infer<typeof CreateHumanInputRequestInput>;
+
+export const AnswerHumanInputInput = z.object({
+  answer: z.string().min(1),
+  answeredBy: z.string().max(255).optional(),
+});
+export type AnswerHumanInputInput = z.infer<typeof AnswerHumanInputInput>;
 
 // ─── Filter Types ───────────────────────────────────────────────────────────
 

@@ -84,6 +84,18 @@ export const snapshotTypeEnum = pgEnum("snapshot_type", [
   "compact",
 ]);
 
+export const inputRequestStatusEnum = pgEnum("input_request_status", [
+  "waiting",
+  "answered",
+  "cancelled",
+]);
+
+export const inputUrgencyEnum = pgEnum("input_urgency", [
+  "blocking",
+  "normal",
+  "low",
+]);
+
 export const conceptTypeEnum = pgEnum("concept_type", [
   "technology",
   "domain",
@@ -634,6 +646,57 @@ export const contextSnapshotsRelations = relations(
     project: one(projects, {
       fields: [contextSnapshots.projectId],
       references: [projects.id],
+    }),
+  }),
+);
+
+// ─── Human Input Requests ───────────────────────────────────────────────────
+
+export const humanInputRequests = pgTable("human_input_requests", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  projectId: uuid("project_id").references(() => projects.id, {
+    onDelete: "cascade",
+  }),
+  epicId: uuid("epic_id").references(() => epics.id, { onDelete: "set null" }),
+  issueId: uuid("issue_id").references(() => issues.id, {
+    onDelete: "set null",
+  }),
+  sessionId: varchar("session_id", { length: 255 }),
+  agentName: varchar("agent_name", { length: 255 }).notNull().default("unknown"),
+  status: inputRequestStatusEnum("status").notNull().default("waiting"),
+  urgency: inputUrgencyEnum("urgency").notNull().default("blocking"),
+  question: text("question").notNull(),
+  context: text("context"),
+  options: jsonb("options").$type<string[]>(),
+  answer: text("answer"),
+  answeredBy: varchar("answered_by", { length: 255 }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  answeredAt: timestamp("answered_at", { withTimezone: true }),
+});
+
+export const humanInputRequestsRelations = relations(
+  humanInputRequests,
+  ({ one }) => ({
+    workspace: one(workspaces, {
+      fields: [humanInputRequests.workspaceId],
+      references: [workspaces.id],
+    }),
+    project: one(projects, {
+      fields: [humanInputRequests.projectId],
+      references: [projects.id],
+    }),
+    epic: one(epics, {
+      fields: [humanInputRequests.epicId],
+      references: [epics.id],
+    }),
+    issue: one(issues, {
+      fields: [humanInputRequests.issueId],
+      references: [issues.id],
     }),
   }),
 );

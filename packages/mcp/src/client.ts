@@ -460,4 +460,31 @@ export class RavenclawApiClient {
       `/sessions/snapshots?${params.toString()}`,
     );
   }
+
+  // ── Human Input Requests ──────────────────────────────────────────
+
+  async requestHumanInput(input: {
+    question: string;
+    projectId?: string;
+    epicId?: string;
+    issueId?: string;
+    context?: string;
+    options?: string[];
+    urgency?: string;
+    agentName?: string;
+    sessionId?: string;
+  }): Promise<unknown> {
+    return this.request<unknown>("POST", "/input-requests", input);
+  }
+
+  async checkHumanInput(requestId: string): Promise<unknown> {
+    return this.request<unknown>(
+      "GET",
+      `/input-requests/${encodeURIComponent(requestId)}/check`,
+    );
+  }
+
+  async listWaitingInputs(): Promise<unknown[]> {
+    return this.request<unknown[]>("GET", "/input-requests/waiting");
+  }
 }

@@ -18,3 +18,4 @@ export type { SearchResult } from "./search.service.js";
 export { CommentService } from "./comment.service.js";
 export { EpicLockService } from "./lock.service.js";
 export { SessionService } from "./session.service.js";
+export { HumanInputService } from "./human-input.service.js";

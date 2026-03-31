@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api, type WorkContext, type EpicLockInfo, type Project } from '../lib/api';
 import { Card } from '../components/Card';
+import { PendingInputs } from '../components/PendingInputs';
 import { StatusBadge } from '../components/StatusBadge';
 import { PriorityBadge } from '../components/PriorityBadge';
 import { ProgressBar } from '../components/ProgressBar';
@@ -58,6 +59,9 @@ export function Dashboard() {
           <p className="text-2xl font-bold text-orange-600 mt-1">{locks.length}</p>
         </Card>
       </div>
+
+      {/* Pending human input requests */}
+      <PendingInputs />
 
       <div className="grid grid-cols-2 gap-6">
         {/* Projects overview */}

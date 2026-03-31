@@ -200,6 +200,24 @@ export interface ContextSnapshotInfo {
   createdAt: string;
 }
 
+export interface HumanInputRequestInfo {
+  id: string;
+  projectId: string | null;
+  epicId: string | null;
+  issueId: string | null;
+  sessionId: string | null;
+  agentName: string;
+  status: string;
+  urgency: string;
+  question: string;
+  context: string | null;
+  options: string[] | null;
+  answer: string | null;
+  answeredBy: string | null;
+  createdAt: string;
+  answeredAt: string | null;
+}
+
 export const api = {
   listProjects: () => apiFetch<Project[]>('/projects'),
   getProject: (id: string) => apiFetch<Project>(`/projects/${encodeURIComponent(id)}`),
@@ -257,4 +275,22 @@ export const api = {
     apiFetch<ContextSnapshotInfo[]>(`/sessions/snapshots?project_id=${encodeURIComponent(projectId)}`),
   getLatestSnapshot: (projectId: string) =>
     apiFetch<ContextSnapshotInfo>(`/sessions/snapshots/latest?project_id=${encodeURIComponent(projectId)}`),
+
+  // Human Input Requests
+  listWaitingInputs: () => apiFetch<HumanInputRequestInfo[]>('/input-requests/waiting'),
+  listInputRequests: (projectId?: string) => {
+    const params = new URLSearchParams();
+    if (projectId) params.set('project_id', projectId);
+    const qs = params.toString();
+    return apiFetch<HumanInputRequestInfo[]>(`/input-requests${qs ? `?${qs}` : ''}`);
+  },
+  answerInput: (id: string, answer: string, answeredBy?: string) =>
+    apiFetch<HumanInputRequestInfo>(`/input-requests/${encodeURIComponent(id)}/answer`, {
+      method: 'PUT',
+      body: JSON.stringify({ answer, answeredBy }),
+    }),
+  cancelInput: (id: string) =>
+    apiFetch<HumanInputRequestInfo>(`/input-requests/${encodeURIComponent(id)}/cancel`, {
+      method: 'PUT',
+    }),
 };

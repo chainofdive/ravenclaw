@@ -7,6 +7,7 @@ import { ProgressBar } from '../components/ProgressBar';
 import { CommentPanel } from '../components/CommentPanel';
 import { LockBadge } from '../components/LockBadge';
 import { ProjectTreeGraph, type ProjectGraphData } from '../components/ProjectTreeGraph';
+import { PendingInputs } from '../components/PendingInputs';
 
 type ViewMode = 'list' | 'graph' | 'history';
 
@@ -232,6 +233,9 @@ export function Projects() {
 
           {selectedId === project.id && view === 'history' && (
             <div className="mt-4 space-y-4">
+              {/* Pending human input */}
+              <PendingInputs projectId={project.id} />
+
               {/* Context Snapshots */}
               <div>
                 <h3 className="text-sm font-semibold text-slate-700 mb-2">Context Snapshots</h3>
