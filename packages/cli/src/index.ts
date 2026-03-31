@@ -3,6 +3,7 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { createInitCommand } from './commands/init.js';
+import { createProjectCommand } from './commands/project.js';
 import { createEpicCommand } from './commands/epic.js';
 import { createIssueCommand } from './commands/issue.js';
 import { createWikiCommand } from './commands/wiki.js';
@@ -24,6 +25,7 @@ program
 
 // Register all commands
 program.addCommand(createInitCommand());
+program.addCommand(createProjectCommand());
 program.addCommand(createEpicCommand());
 program.addCommand(createIssueCommand());
 program.addCommand(createWikiCommand());

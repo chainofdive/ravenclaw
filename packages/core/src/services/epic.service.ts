@@ -81,6 +81,7 @@ export class EpicService {
       .insert(epics)
       .values({
         workspaceId: input.workspaceId,
+        projectId: input.projectId ?? null,
         parentEpicId: input.parentEpicId ?? null,
         key,
         title: input.title,
@@ -111,6 +112,8 @@ export class EpicService {
     if (input.status !== undefined) updateData.status = input.status;
     if (input.priority !== undefined) updateData.priority = input.priority;
     if (input.metadata !== undefined) updateData.metadata = input.metadata;
+    if (input.projectId !== undefined)
+      updateData.projectId = input.projectId;
     if (input.parentEpicId !== undefined)
       updateData.parentEpicId = input.parentEpicId;
     if (input.startedAt !== undefined) updateData.startedAt = input.startedAt;

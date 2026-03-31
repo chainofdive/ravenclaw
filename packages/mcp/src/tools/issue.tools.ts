@@ -60,7 +60,7 @@ export function registerIssueTools(
   // ── create_issue ────────────────────────────────────────────────────
   server.tool(
     "create_issue",
-    "Create a new issue under an epic. Issues represent individual tasks. Use add_dependency to express ordering between issues (e.g. issue B depends_on issue A). Do NOT create separate epics for phases — use dependencies instead.",
+    "Create a new issue under an epic. Issues represent individual tasks within a phase/epic.",
     {
       epic_id: z.string().describe("Parent epic ID (UUID) or key (e.g. RC-E1)"),
       title: z.string().describe("Issue title"),

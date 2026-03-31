@@ -2,6 +2,7 @@
 // These mirror the API response shapes. The CLI is a standalone HTTP client
 // and intentionally does NOT import from @ravenclaw/core.
 
+export type ProjectStatus = 'planning' | 'active' | 'completed' | 'on_hold' | 'cancelled';
 export type EpicStatus = 'backlog' | 'active' | 'completed' | 'cancelled';
 export type IssueStatus = 'todo' | 'in_progress' | 'in_review' | 'done' | 'cancelled';
 export type Priority = 'critical' | 'high' | 'medium' | 'low';
@@ -11,6 +12,26 @@ export type EntityType = 'epic' | 'issue' | 'wiki_page' | 'concept';
 export type ConceptType = 'technology' | 'domain' | 'pattern' | 'person' | 'system' | 'custom';
 export type RelationType = 'uses' | 'part_of' | 'depends_on' | 'related_to' | 'instance_of';
 export type OutputFormat = 'table' | 'json' | 'markdown';
+
+export interface Project {
+  id: string;
+  workspaceId: string;
+  key: string;
+  name: string;
+  description: string;
+  status: ProjectStatus;
+  priority: Priority;
+  metadata: Record<string, unknown>;
+  startedAt?: string | null;
+  targetDate?: string | null;
+  completedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProjectTree extends Project {
+  epics: EpicTree[];
+}
 
 export interface Epic {
   id: string;

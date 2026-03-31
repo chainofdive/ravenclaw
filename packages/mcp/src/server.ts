@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { RavenclawApiClient } from "./client.js";
+import { registerProjectTools } from "./tools/project.tools.js";
 import { registerEpicTools } from "./tools/epic.tools.js";
 import { registerIssueTools } from "./tools/issue.tools.js";
 import { registerWikiTools } from "./tools/wiki.tools.js";
@@ -44,6 +45,7 @@ export function createServer(config: ServerConfig): McpServer {
   });
 
   // Register all tools
+  registerProjectTools(server, client);
   registerEpicTools(server, client);
   registerIssueTools(server, client);
   registerWikiTools(server, client);

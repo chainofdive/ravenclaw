@@ -15,6 +15,14 @@ import { relations } from "drizzle-orm";
 
 // ─── Enums ───────────────────────────────────────────────────────────────────
 
+export const projectStatusEnum = pgEnum("project_status", [
+  "planning",
+  "active",
+  "completed",
+  "on_hold",
+  "cancelled",
+]);
+
 export const epicStatusEnum = pgEnum("epic_status", [
   "backlog",
   "active",
@@ -100,6 +108,7 @@ export const workspaces = pgTable("workspaces", {
 
 export const workspacesRelations = relations(workspaces, ({ many }) => ({
   apiKeys: many(apiKeys),
+  projects: many(projects),
   epics: many(epics),
   issues: many(issues),
   dependencies: many(dependencies),
@@ -108,6 +117,39 @@ export const workspacesRelations = relations(workspaces, ({ many }) => ({
   ontologyRelations: many(ontologyRelations),
   activityLog: many(activityLog),
   comments: many(comments),
+}));
+
+// ─── Projects ───────────────────────────────────────────────────────────────
+
+export const projects = pgTable("projects", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  key: varchar("key", { length: 20 }).notNull(),
+  name: varchar("name", { length: 500 }).notNull(),
+  description: text("description").notNull().default(""),
+  status: projectStatusEnum("status").notNull().default("planning"),
+  priority: priorityEnum("priority").notNull().default("medium"),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
+  startedAt: timestamp("started_at", { withTimezone: true }),
+  targetDate: timestamp("target_date", { withTimezone: true }),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+export const projectsRelations = relations(projects, ({ one, many }) => ({
+  workspace: one(workspaces, {
+    fields: [projects.workspaceId],
+    references: [workspaces.id],
+  }),
+  epics: many(epics),
 }));
 
 // ─── API Keys ────────────────────────────────────────────────────────────────
@@ -142,6 +184,9 @@ export const epics = pgTable("epics", {
   workspaceId: uuid("workspace_id")
     .notNull()
     .references(() => workspaces.id, { onDelete: "cascade" }),
+  projectId: uuid("project_id").references(() => projects.id, {
+    onDelete: "cascade",
+  }),
   parentEpicId: uuid("parent_epic_id"),
   key: varchar("key", { length: 20 }).notNull(),
   title: varchar("title", { length: 500 }).notNull(),
@@ -166,6 +211,10 @@ export const epicsRelations = relations(epics, ({ one, many }) => ({
   workspace: one(workspaces, {
     fields: [epics.workspaceId],
     references: [workspaces.id],
+  }),
+  project: one(projects, {
+    fields: [epics.projectId],
+    references: [projects.id],
   }),
   parentEpic: one(epics, {
     fields: [epics.parentEpicId],

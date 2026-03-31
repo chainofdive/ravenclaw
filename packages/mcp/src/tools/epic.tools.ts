@@ -51,8 +51,12 @@ export function registerEpicTools(
   // ── create_epic ─────────────────────────────────────────────────────
   server.tool(
     "create_epic",
-    "Create a new epic. An epic represents one project or work stream — do NOT split phases into separate epics. Use issues with dependencies (add_dependency) to express ordering and phases within an epic.",
+    "Create a new epic (phase/milestone) under a project. Each epic represents a phase of work. Use add_dependency between epics to define phase ordering.",
     {
+      project_id: z
+        .string()
+        .optional()
+        .describe("Parent project ID (UUID) or key (e.g. RC-P1). Recommended."),
       title: z.string().describe("Epic title"),
       description: z.string().optional().describe("Epic description"),
       priority: z
@@ -64,8 +68,9 @@ export function registerEpicTools(
         .optional()
         .describe("Target completion date (ISO 8601, e.g. 2025-06-30)"),
     },
-    async ({ title, description, priority, target_date }) => {
+    async ({ project_id, title, description, priority, target_date }) => {
       const input: Record<string, unknown> = { title };
+      if (project_id !== undefined) input.projectId = project_id;
       if (description !== undefined) input.description = description;
       if (priority !== undefined) input.priority = priority;
       if (target_date !== undefined) input.targetDate = target_date;

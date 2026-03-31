@@ -7,12 +7,13 @@ This skill helps you quickly load and apply work context from the Ravenclaw syst
 
 When installed as a plugin, the MCP server and API credentials are configured automatically via `userConfig`. For standalone use, ensure the `rc` CLI is configured (`rc init`).
 
-## Structure Rules
+## Structure: Project → Epic → Issue
 
-- **1 project = 1 epic.** Do NOT split phases, milestones, or stages into separate epics.
-- **All tasks = issues under that epic.** Use `create_issue` with the epic key.
-- **Ordering = dependencies.** Use `add_dependency(source_type: "issue", source_id: "RC-I5", target_type: "issue", target_id: "RC-I3", dependency_type: "depends_on")` to express that RC-I5 depends on RC-I3. This is how phases are represented.
-- **Priority** indicates importance, not order. Use dependencies for sequencing.
+- **Project** = one product, game, campaign, or work stream. Use `create_project`.
+- **Epic** = a phase or milestone within a project. Use `create_epic(project_id: "RC-P1", ...)`.
+- **Issue** = an individual task within an epic. Use `create_issue(epic_id: "RC-E1", ...)`.
+- **Ordering** = use `add_dependency` between epics (phase order) or between issues (task order).
+  - Example: `add_dependency(source_type: "epic", source_id: "RC-E2", target_type: "epic", target_id: "RC-E1", dependency_type: "depends_on")` means Phase 2 starts after Phase 1.
 
 ## Steps
 

@@ -73,6 +73,39 @@ export class RavenclawApiClient {
     return json.data;
   }
 
+  // ── Projects ─────────────────────────────────────────────────────────
+
+  async listProjects(filters?: {
+    status?: string;
+    priority?: string;
+  }): Promise<unknown[]> {
+    const params = new URLSearchParams();
+    if (filters?.status) params.set("status", filters.status);
+    if (filters?.priority) params.set("priority", filters.priority);
+    const qs = params.toString();
+    return this.request<unknown[]>("GET", `/projects${qs ? `?${qs}` : ""}`);
+  }
+
+  async getProject(id: string): Promise<unknown> {
+    return this.request<unknown>("GET", `/projects/${encodeURIComponent(id)}`);
+  }
+
+  async getProjectTree(id: string): Promise<unknown> {
+    return this.request<unknown>("GET", `/projects/${encodeURIComponent(id)}/tree`);
+  }
+
+  async createProject(input: Record<string, unknown>): Promise<unknown> {
+    return this.request<unknown>("POST", "/projects", input);
+  }
+
+  async updateProject(id: string, input: Record<string, unknown>): Promise<unknown> {
+    return this.request<unknown>("PUT", `/projects/${encodeURIComponent(id)}`, input);
+  }
+
+  async deleteProject(id: string): Promise<unknown> {
+    return this.request<unknown>("DELETE", `/projects/${encodeURIComponent(id)}`);
+  }
+
   // ── Epics ───────────────────────────────────────────────────────────
 
   async listEpics(filters?: {

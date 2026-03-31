@@ -1,8 +1,8 @@
 import { Hono } from "hono";
 import { CreateEpicInput, UpdateEpicInput } from "@ravenclaw/core";
-import type { EpicFilters, EpicService } from "@ravenclaw/core";
+import type { EpicFilters, EpicService, ProjectService } from "@ravenclaw/core";
 import type { AppEnv } from "../app.js";
-import { notFound } from "../middleware/error.js";
+import { badRequest, notFound } from "../middleware/error.js";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -41,10 +41,20 @@ epics.get("/", async (c) => {
 // POST /api/v1/epics — create epic
 epics.post("/", async (c) => {
   const epicService = c.get("epicService");
+  const projectService = c.get("projectService") as ProjectService;
   const workspaceId = c.get("workspaceId");
 
   const body = await c.req.json();
-  const input = CreateEpicInput.parse({ ...body, workspaceId });
+
+  // Resolve projectId from key if needed
+  let projectId = body.projectId ?? body.project_id;
+  if (projectId && !UUID_RE.test(projectId)) {
+    const project = await projectService.getByKey(workspaceId, projectId);
+    if (!project) badRequest(`Project not found: ${projectId}`);
+    projectId = project.id;
+  }
+
+  const input = CreateEpicInput.parse({ ...body, projectId, workspaceId });
 
   const epic = await epicService.create(input);
 
@@ -65,11 +75,21 @@ epics.get("/:id", async (c) => {
 // PUT /api/v1/epics/:id — update epic
 epics.put("/:id", async (c) => {
   const epicService = c.get("epicService");
+  const projectService = c.get("projectService") as ProjectService;
   const workspaceId = c.get("workspaceId");
   const id = c.req.param("id");
 
   const body = await c.req.json();
-  const input = UpdateEpicInput.parse(body);
+
+  // Resolve projectId from key if needed
+  let projectId = body.projectId ?? body.project_id;
+  if (projectId && !UUID_RE.test(projectId)) {
+    const project = await projectService.getByKey(workspaceId, projectId);
+    if (!project) badRequest(`Project not found: ${projectId}`);
+    projectId = project.id;
+  }
+
+  const input = UpdateEpicInput.parse({ ...body, projectId });
 
   const existing = await resolveEpic(epicService, id, workspaceId);
   const epic = await epicService.update(existing.id, input);

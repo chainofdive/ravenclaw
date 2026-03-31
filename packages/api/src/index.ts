@@ -3,6 +3,7 @@
 import { serve } from "@hono/node-server";
 import {
   createDb,
+  ProjectService,
   EpicService,
   IssueService,
   DependencyService,
@@ -28,6 +29,7 @@ if (!DATABASE_URL) {
 const db = createDb(DATABASE_URL);
 
 // Create service instances
+const projectService = new ProjectService(db);
 const epicService = new EpicService(db);
 const issueService = new IssueService(db);
 const dependencyService = new DependencyService(db);
@@ -41,6 +43,7 @@ const epicLockService = new EpicLockService(db);
 // Create the Hono application
 const app = createApp({
   db,
+  projectService,
   epicService,
   issueService,
   dependencyService,

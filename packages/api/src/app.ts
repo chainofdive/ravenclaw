@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import {
+  ProjectService,
   EpicService,
   IssueService,
   DependencyService,
@@ -15,6 +16,7 @@ import { errorHandler } from "./middleware/error.js";
 import { requestLogger } from "./middleware/logging.js";
 import { authMiddleware } from "./middleware/auth.js";
 import healthRoutes from "./routes/health.js";
+import projectRoutes from "./routes/projects.js";
 import epicRoutes from "./routes/epics.js";
 import issueRoutes from "./routes/issues.js";
 import wikiRoutes from "./routes/wiki.js";
@@ -34,6 +36,7 @@ export type AppEnv = {
   Variables: {
     db: unknown;
     workspaceId: string;
+    projectService: ProjectService;
     epicService: EpicService;
     issueService: IssueService;
     dependencyService: DependencyService;
@@ -48,6 +51,7 @@ export type AppEnv = {
 
 export interface AppServices {
   db: unknown;
+  projectService: ProjectService;
   epicService: EpicService;
   issueService: IssueService;
   dependencyService: DependencyService;
@@ -76,6 +80,7 @@ export function createApp(services: AppServices): Hono<AppEnv> {
   // 3. Inject services into context for all requests
   app.use("*", async (c, next) => {
     c.set("db", services.db);
+    c.set("projectService", services.projectService);
     c.set("epicService", services.epicService);
     c.set("issueService", services.issueService);
     c.set("dependencyService", services.dependencyService);
@@ -93,6 +98,7 @@ export function createApp(services: AppServices): Hono<AppEnv> {
 
   // --- Routes ---
   app.route("/api/v1/health", healthRoutes);
+  app.route("/api/v1/projects", projectRoutes);
   app.route("/api/v1/epics", epicRoutes);
   app.route("/api/v1/issues", issueRoutes);
   app.route("/api/v1/wiki", wikiRoutes);

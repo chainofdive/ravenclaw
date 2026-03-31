@@ -2,6 +2,7 @@ import { z } from "zod";
 import type {
   workspaces,
   apiKeys,
+  projects,
   epics,
   issues,
   dependencies,
@@ -21,6 +22,9 @@ export type NewWorkspace = typeof workspaces.$inferInsert;
 
 export type ApiKey = typeof apiKeys.$inferSelect;
 export type NewApiKey = typeof apiKeys.$inferInsert;
+
+export type Project = typeof projects.$inferSelect;
+export type NewProject = typeof projects.$inferInsert;
 
 export type Epic = typeof epics.$inferSelect;
 export type NewEpic = typeof epics.$inferInsert;
@@ -54,6 +58,7 @@ export type NewEpicLock = typeof epicLocks.$inferInsert;
 
 // ─── Enum Value Types ───────────────────────────────────────────────────────
 
+export type ProjectStatus = "planning" | "active" | "completed" | "on_hold" | "cancelled";
 export type EpicStatus = "backlog" | "active" | "completed" | "cancelled";
 export type IssueStatus =
   | "todo"
@@ -103,9 +108,40 @@ export const UpdateWorkspaceInput = z.object({
 });
 export type UpdateWorkspaceInput = z.infer<typeof UpdateWorkspaceInput>;
 
+// Project
+export const CreateProjectInput = z.object({
+  workspaceId: z.string().uuid(),
+  name: z.string().min(1).max(500),
+  description: z.string().optional(),
+  status: z.enum(["planning", "active", "completed", "on_hold", "cancelled"]).optional(),
+  priority: z.enum(["critical", "high", "medium", "low"]).optional(),
+  metadata: z.record(z.unknown()).optional(),
+  startedAt: z.coerce.date().nullable().optional(),
+  targetDate: z.coerce.date().nullable().optional(),
+});
+export type CreateProjectInput = z.infer<typeof CreateProjectInput>;
+
+export const UpdateProjectInput = z.object({
+  name: z.string().min(1).max(500).optional(),
+  description: z.string().optional(),
+  status: z.enum(["planning", "active", "completed", "on_hold", "cancelled"]).optional(),
+  priority: z.enum(["critical", "high", "medium", "low"]).optional(),
+  metadata: z.record(z.unknown()).optional(),
+  startedAt: z.coerce.date().nullable().optional(),
+  targetDate: z.coerce.date().nullable().optional(),
+  completedAt: z.coerce.date().nullable().optional(),
+});
+export type UpdateProjectInput = z.infer<typeof UpdateProjectInput>;
+
+export interface ProjectFilters {
+  status?: ProjectStatus;
+  priority?: Priority;
+}
+
 // Epic
 export const CreateEpicInput = z.object({
   workspaceId: z.string().uuid(),
+  projectId: z.string().uuid().nullable().optional(),
   parentEpicId: z.string().uuid().nullable().optional(),
   title: z.string().min(1).max(500),
   description: z.string().optional(),
@@ -118,6 +154,7 @@ export const CreateEpicInput = z.object({
 export type CreateEpicInput = z.infer<typeof CreateEpicInput>;
 
 export const UpdateEpicInput = z.object({
+  projectId: z.string().uuid().nullable().optional(),
   parentEpicId: z.string().uuid().nullable().optional(),
   title: z.string().min(1).max(500).optional(),
   description: z.string().optional(),

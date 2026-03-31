@@ -1,4 +1,7 @@
 import type {
+  Project,
+  ProjectTree,
+  ProjectStatus,
   Epic,
   EpicTree,
   Issue,
@@ -221,6 +224,35 @@ export class RavenclawClient {
 
   async health(): Promise<{ status: string }> {
     return this.get<{ status: string }>('/health');
+  }
+
+  // ── Projects ───────────────────────────────────────────────────────────
+
+  async listProjects(filters?: { status?: ProjectStatus; priority?: Priority }): Promise<Project[]> {
+    return this.get<Project[]>('/projects', {
+      status: filters?.status,
+      priority: filters?.priority,
+    });
+  }
+
+  async getProject(id: string): Promise<Project> {
+    return this.get<Project>(`/projects/${encodeURIComponent(id)}`);
+  }
+
+  async getProjectTree(id: string): Promise<ProjectTree> {
+    return this.get<ProjectTree>(`/projects/${encodeURIComponent(id)}/tree`);
+  }
+
+  async createProject(input: { name: string; description?: string; priority?: Priority; targetDate?: string }): Promise<Project> {
+    return this.post<Project>('/projects', input);
+  }
+
+  async updateProject(id: string, input: Record<string, unknown>): Promise<Project> {
+    return this.put<Project>(`/projects/${encodeURIComponent(id)}`, input);
+  }
+
+  async deleteProject(id: string): Promise<void> {
+    return this.delete<void>(`/projects/${encodeURIComponent(id)}`);
   }
 
   // ── Epics ──────────────────────────────────────────────────────────────

@@ -1,6 +1,7 @@
 export { ActivityLogger } from "./activity-logger.js";
 export type { LogActivityParams } from "./activity-logger.js";
 
+export { ProjectService } from "./project.service.js";
 export { EpicService } from "./epic.service.js";
 export { IssueService } from "./issue.service.js";
 export { DependencyService } from "./dependency.service.js";
