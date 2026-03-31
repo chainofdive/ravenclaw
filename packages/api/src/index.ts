@@ -15,6 +15,7 @@ import {
   EpicLockService,
   SessionService,
   HumanInputService,
+  WorkerService,
 } from "@ravenclaw/core";
 import { createApp } from "./app.js";
 
@@ -43,6 +44,7 @@ const commentService = new CommentService(db);
 const epicLockService = new EpicLockService(db);
 const sessionService = new SessionService(db);
 const humanInputService = new HumanInputService(db);
+const workerService = new WorkerService(db);
 
 // Create the Hono application
 const app = createApp({
@@ -59,6 +61,7 @@ const app = createApp({
   epicLockService,
   sessionService,
   humanInputService,
+  workerService,
 });
 
 // Start the server

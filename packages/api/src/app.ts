@@ -12,6 +12,7 @@ import {
   EpicLockService,
   SessionService,
   HumanInputService,
+  WorkerService,
 } from "@ravenclaw/core";
 import { ZodError } from "zod";
 import { errorHandler } from "./middleware/error.js";
@@ -31,6 +32,7 @@ import lockRoutes from "./routes/locks.js";
 import locksListRoutes from "./routes/locksList.js";
 import sessionRoutes from "./routes/sessions.js";
 import humanInputRoutes from "./routes/humanInput.js";
+import workerRoutes from "./routes/workers.js";
 
 /**
  * Application environment type for Hono context.
@@ -52,6 +54,7 @@ export type AppEnv = {
     epicLockService: EpicLockService;
     sessionService: SessionService;
     humanInputService: HumanInputService;
+    workerService: WorkerService;
   };
 };
 
@@ -69,6 +72,7 @@ export interface AppServices {
   epicLockService: EpicLockService;
   sessionService: SessionService;
   humanInputService: HumanInputService;
+  workerService: WorkerService;
 }
 
 /**
@@ -100,6 +104,7 @@ export function createApp(services: AppServices): Hono<AppEnv> {
     c.set("epicLockService", services.epicLockService);
     c.set("sessionService", services.sessionService);
     c.set("humanInputService", services.humanInputService);
+    c.set("workerService", services.workerService);
     await next();
   });
 
@@ -121,6 +126,7 @@ export function createApp(services: AppServices): Hono<AppEnv> {
   app.route("/api/v1/locks", locksListRoutes);
   app.route("/api/v1/sessions", sessionRoutes);
   app.route("/api/v1/input-requests", humanInputRoutes);
+  app.route("/api/v1/workers", workerRoutes);
 
   // Global onError fallback (catches errors that escape middleware)
   app.onError((err, c) => {

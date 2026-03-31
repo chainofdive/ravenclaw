@@ -7,6 +7,8 @@ import type {
   workSessions,
   contextSnapshots,
   humanInputRequests,
+  agentWorkers,
+  workDirectives,
   issues,
   dependencies,
   wikiPages,
@@ -67,6 +69,12 @@ export type NewContextSnapshot = typeof contextSnapshots.$inferInsert;
 
 export type HumanInputRequest = typeof humanInputRequests.$inferSelect;
 export type NewHumanInputRequest = typeof humanInputRequests.$inferInsert;
+
+export type AgentWorker = typeof agentWorkers.$inferSelect;
+export type NewAgentWorker = typeof agentWorkers.$inferInsert;
+
+export type WorkDirective = typeof workDirectives.$inferSelect;
+export type NewWorkDirective = typeof workDirectives.$inferInsert;
 
 // ─── Enum Value Types ───────────────────────────────────────────────────────
 
@@ -422,6 +430,29 @@ export const AnswerHumanInputInput = z.object({
   answeredBy: z.string().max(255).optional(),
 });
 export type AnswerHumanInputInput = z.infer<typeof AnswerHumanInputInput>;
+
+// ─── Worker / Directive Inputs ──────────────────────────────────────────────
+
+export type WorkerStatus = "idle" | "running" | "paused" | "stopped" | "error";
+export type DirectiveStatus = "pending" | "assigned" | "running" | "completed" | "failed" | "cancelled";
+
+export const CreateWorkerInput = z.object({
+  workspaceId: z.string().uuid(),
+  name: z.string().min(1).max(255),
+  agentType: z.string().max(100).optional(),
+  config: z.record(z.unknown()).optional(),
+});
+export type CreateWorkerInput = z.infer<typeof CreateWorkerInput>;
+
+export const CreateDirectiveInput = z.object({
+  workspaceId: z.string().uuid(),
+  projectId: z.string().uuid().nullable().optional(),
+  epicId: z.string().uuid().nullable().optional(),
+  instruction: z.string().min(1),
+  createdBy: z.string().max(255).optional(),
+  metadata: z.record(z.unknown()).optional(),
+});
+export type CreateDirectiveInput = z.infer<typeof CreateDirectiveInput>;
 
 // ─── Filter Types ───────────────────────────────────────────────────────────
 

@@ -84,6 +84,23 @@ export const snapshotTypeEnum = pgEnum("snapshot_type", [
   "compact",
 ]);
 
+export const workerStatusEnum = pgEnum("worker_status", [
+  "idle",
+  "running",
+  "paused",
+  "stopped",
+  "error",
+]);
+
+export const directiveStatusEnum = pgEnum("directive_status", [
+  "pending",
+  "assigned",
+  "running",
+  "completed",
+  "failed",
+  "cancelled",
+]);
+
 export const inputRequestStatusEnum = pgEnum("input_request_status", [
   "waiting",
   "answered",
@@ -697,6 +714,85 @@ export const humanInputRequestsRelations = relations(
     issue: one(issues, {
       fields: [humanInputRequests.issueId],
       references: [issues.id],
+    }),
+  }),
+);
+
+// ─── Agent Workers ──────────────────────────────────────────────────────────
+
+export const agentWorkers = pgTable("agent_workers", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 255 }).notNull(),
+  status: workerStatusEnum("status").notNull().default("idle"),
+  agentType: varchar("agent_type", { length: 100 }).notNull().default("claude-code"),
+  currentDirectiveId: uuid("current_directive_id"),
+  processId: integer("process_id"),
+  config: jsonb("config").$type<Record<string, unknown>>().default({}),
+  lastHeartbeat: timestamp("last_heartbeat", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+export const agentWorkersRelations = relations(agentWorkers, ({ one }) => ({
+  workspace: one(workspaces, {
+    fields: [agentWorkers.workspaceId],
+    references: [workspaces.id],
+  }),
+}));
+
+// ─── Work Directives ────────────────────────────────────────────────────────
+
+export const workDirectives = pgTable("work_directives", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  projectId: uuid("project_id").references(() => projects.id, {
+    onDelete: "cascade",
+  }),
+  epicId: uuid("epic_id").references(() => epics.id, { onDelete: "set null" }),
+  assignedWorkerId: uuid("assigned_worker_id").references(
+    () => agentWorkers.id,
+    { onDelete: "set null" },
+  ),
+  status: directiveStatusEnum("status").notNull().default("pending"),
+  instruction: text("instruction").notNull(),
+  result: text("result"),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
+  createdBy: varchar("created_by", { length: 255 }).notNull().default("user"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  startedAt: timestamp("started_at", { withTimezone: true }),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+});
+
+export const workDirectivesRelations = relations(
+  workDirectives,
+  ({ one }) => ({
+    workspace: one(workspaces, {
+      fields: [workDirectives.workspaceId],
+      references: [workspaces.id],
+    }),
+    project: one(projects, {
+      fields: [workDirectives.projectId],
+      references: [projects.id],
+    }),
+    epic: one(epics, {
+      fields: [workDirectives.epicId],
+      references: [epics.id],
+    }),
+    worker: one(agentWorkers, {
+      fields: [workDirectives.assignedWorkerId],
+      references: [agentWorkers.id],
     }),
   }),
 );

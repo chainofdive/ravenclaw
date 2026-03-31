@@ -5,6 +5,7 @@ const navItems = [
   { to: '/projects', label: 'Projects', icon: '▣' },
   { to: '/epics', label: 'Epics', icon: '◆' },
   { to: '/issues', label: 'Issues', icon: '◇' },
+  { to: '/workers', label: 'Workers', icon: '⚙' },
   { to: '/wiki', label: 'Wiki', icon: '▤' },
   { to: '/ontology', label: 'Ontology', icon: '◎' },
   { to: '/context', label: 'Context', icon: '⧉' },
