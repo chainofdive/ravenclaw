@@ -33,9 +33,10 @@ test.describe('Projects page', () => {
     await expect(page.locator('.react-flow')).toBeVisible({ timeout: 10000 });
   });
 
-  test('shows command panel alongside content', async ({ page }) => {
+  test('opens command panel as overlay', async ({ page }) => {
     await page.goto('/projects');
-    // First project should auto-select, command panel should be visible
+    // Click Command button to open overlay
+    await page.getByRole('button', { name: 'Command' }).click();
     await expect(page.getByPlaceholder('Instruct agent', { exact: false })).toBeVisible({ timeout: 5000 });
   });
 
@@ -45,8 +46,9 @@ test.describe('Projects page', () => {
     await expect(page.getByRole('heading', { name: 'Context Snapshots' })).toBeVisible({ timeout: 5000 });
   });
 
-  test('sends a command while viewing tree', async ({ page }) => {
+  test('sends a command via overlay', async ({ page }) => {
     await page.goto('/projects');
+    await page.getByRole('button', { name: 'Command' }).click();
 
     const uniqueCmd = `E2E cmd ${Date.now()}`;
     await page.getByPlaceholder('Instruct agent', { exact: false }).fill(uniqueCmd);
