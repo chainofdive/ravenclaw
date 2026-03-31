@@ -10,6 +10,7 @@ import { registerSearchTools } from "./tools/search.tools.js";
 import { registerCommentTools } from "./tools/comment.tools.js";
 import { registerDependencyTools } from "./tools/dependency.tools.js";
 import { registerLockTools } from "./tools/lock.tools.js";
+import { registerSessionTools } from "./tools/session.tools.js";
 import { registerContextResources } from "./resources/context.resources.js";
 import { registerEpicResources } from "./resources/epic.resources.js";
 import { registerWikiResources } from "./resources/wiki.resources.js";
@@ -55,6 +56,7 @@ export function createServer(config: ServerConfig): McpServer {
   registerCommentTools(server, client);
   registerDependencyTools(server, client);
   registerLockTools(server, client);
+  registerSessionTools(server, client);
 
   // Register all resources
   registerContextResources(server, client);

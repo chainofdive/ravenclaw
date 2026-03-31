@@ -64,21 +64,32 @@ Ravenclaw 작업 컨텍스트를 확인해줘.
 ```
 세션 시작
   │
-  ├─ rc project show RC-P1 (또는 rc context)
-  │   └─ 프로젝트 내 에픽/이슈 현황 파악
+  ├─ get_latest_context(RC-P1)         ← 이전 세션의 핸드오프 로드
+  ├─ start_work_session(RC-P1, ...)    ← 세션 기록 시작
+  ├─ rc project show RC-P1             ← 에픽/이슈 현황 파악
   │
-  ├─ 작업할 이슈 선택
-  │   └─ rc issue start <key>
-  │
-  ├─ 코딩 작업 수행
-  │
-  ├─ 작업 완료
+  ├─ 작업 수행
+  │   ├─ rc issue start <key>
+  │   ├─ 코딩
   │   ├─ rc issue done <key>
-  │   ├─ rc wiki write <slug>  (필요 시)
-  │   └─ rc issue create <epic-key> "후속 작업"  (필요 시)
+  │   └─ save_context(RC-P1, "진행 상황...")  ← 중간 저장
   │
-  └─ 세션 종료 (컨텍스트는 Ravenclaw에 저장됨)
+  ├─ 세션 종료
+  │   ├─ save_context(RC-P1, "핸드오프 내용...", "handoff")
+  │   └─ end_work_session(session_id, summary, issues_worked)
+  │
+  └─ 다음 세션이 get_latest_context로 이어받음
 ```
+
+### 컨텍스트 스냅샷이란?
+
+에이전트가 작업 중 저장하는 진행 상황 요약입니다. 새 세션의 에이전트가 `get_latest_context`로 이전 에이전트의 마지막 스냅샷을 읽어 이어서 작업합니다.
+
+**스냅샷에 포함할 내용:**
+- 완료한 이슈와 진행 중인 이슈
+- 내린 기술적 결정과 이유
+- 발견한 문제나 블로커
+- 다음 에이전트가 해야 할 작업
 
 ---
 

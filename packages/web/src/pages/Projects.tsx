@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api, type Project, type ProjectTree, type Dependency } from '../lib/api';
+import { api, type Project, type ProjectTree, type Dependency, type WorkSessionInfo, type ContextSnapshotInfo } from '../lib/api';
 import { Card } from '../components/Card';
 import { StatusBadge } from '../components/StatusBadge';
 import { PriorityBadge } from '../components/PriorityBadge';
@@ -8,7 +8,7 @@ import { CommentPanel } from '../components/CommentPanel';
 import { LockBadge } from '../components/LockBadge';
 import { ProjectTreeGraph, type ProjectGraphData } from '../components/ProjectTreeGraph';
 
-type ViewMode = 'list' | 'graph';
+type ViewMode = 'list' | 'graph' | 'history';
 
 export function Projects() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -19,6 +19,9 @@ export function Projects() {
   const [view, setView] = useState<ViewMode>('list');
   const [graphData, setGraphData] = useState<ProjectGraphData | null>(null);
   const [graphLoading, setGraphLoading] = useState(false);
+  const [sessions, setSessions] = useState<WorkSessionInfo[]>([]);
+  const [snapshots, setSnapshots] = useState<ContextSnapshotInfo[]>([]);
+  const [expandedSnapshot, setExpandedSnapshot] = useState<string | null>(null);
 
   useEffect(() => {
     api.listProjects().then(setProjects).catch((e) => setError(e.message));
@@ -38,6 +41,13 @@ export function Projects() {
       setError(e.message);
     }
   };
+
+  // Load history data when switching to history view
+  useEffect(() => {
+    if (view !== 'history' || !selectedId) return;
+    api.listSessions(selectedId).then(setSessions).catch(() => setSessions([]));
+    api.listSnapshots(selectedId).then(setSnapshots).catch(() => setSnapshots([]));
+  }, [view, selectedId]);
 
   // Load graph data for selected project
   useEffect(() => {
@@ -111,6 +121,14 @@ export function Projects() {
               }`}
             >
               Graph
+            </button>
+            <button
+              onClick={() => setView('history')}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                view === 'history' ? 'bg-white text-teal-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              History
             </button>
           </div>
         )}
@@ -209,6 +227,94 @@ export function Projects() {
                 </div>
               )}
               {!graphLoading && graphData && <ProjectTreeGraph data={graphData} />}
+            </div>
+          )}
+
+          {selectedId === project.id && view === 'history' && (
+            <div className="mt-4 space-y-4">
+              {/* Context Snapshots */}
+              <div>
+                <h3 className="text-sm font-semibold text-slate-700 mb-2">Context Snapshots</h3>
+                {snapshots.length === 0 ? (
+                  <p className="text-xs text-slate-400">No snapshots yet</p>
+                ) : (
+                  <div className="space-y-2">
+                    {snapshots.map((snap) => (
+                      <div key={snap.id} className="border border-gray-200 rounded-lg overflow-hidden">
+                        <div
+                          className="flex items-center gap-3 px-3 py-2 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
+                          onClick={() => setExpandedSnapshot(expandedSnapshot === snap.id ? null : snap.id)}
+                        >
+                          <span className="text-slate-400 text-xs">{expandedSnapshot === snap.id ? '▾' : '▸'}</span>
+                          <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                            snap.snapshotType === 'handoff' ? 'bg-orange-100 text-orange-700' :
+                            snap.snapshotType === 'compact' ? 'bg-purple-100 text-purple-700' :
+                            'bg-blue-100 text-blue-700'
+                          }`}>{snap.snapshotType}</span>
+                          <span className="text-xs text-slate-600">{snap.agentName}</span>
+                          <span className="text-xs text-slate-400 ml-auto">
+                            {new Date(snap.createdAt).toLocaleString()}
+                          </span>
+                        </div>
+                        {expandedSnapshot === snap.id && (
+                          <div className="px-4 py-3 text-sm text-slate-700 whitespace-pre-wrap border-t border-gray-200 bg-white max-h-96 overflow-y-auto">
+                            {snap.content}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Work Sessions */}
+              <div>
+                <h3 className="text-sm font-semibold text-slate-700 mb-2">Work Sessions</h3>
+                {sessions.length === 0 ? (
+                  <p className="text-xs text-slate-400">No sessions recorded yet</p>
+                ) : (
+                  <div className="space-y-2">
+                    {sessions.map((s) => {
+                      const duration = s.endedAt
+                        ? Math.round((new Date(s.endedAt).getTime() - new Date(s.startedAt).getTime()) / 60000)
+                        : null;
+                      return (
+                        <div key={s.id} className="border border-gray-200 rounded-lg px-3 py-2">
+                          <div className="flex items-center gap-2">
+                            <span className={`w-2 h-2 rounded-full ${
+                              s.status === 'active' ? 'bg-green-500' :
+                              s.status === 'completed' ? 'bg-gray-400' :
+                              'bg-red-400'
+                            }`} />
+                            <span className="text-sm font-medium text-slate-700">{s.agentName}</span>
+                            <span className={`text-xs px-1.5 py-0.5 rounded ${
+                              s.status === 'active' ? 'bg-green-100 text-green-700' :
+                              s.status === 'completed' ? 'bg-gray-100 text-gray-600' :
+                              'bg-red-100 text-red-700'
+                            }`}>{s.status}</span>
+                            {duration !== null && (
+                              <span className="text-xs text-slate-400">{duration}m</span>
+                            )}
+                            <span className="text-xs text-slate-400 ml-auto">
+                              {new Date(s.startedAt).toLocaleString()}
+                            </span>
+                          </div>
+                          {s.summary && (
+                            <p className="text-xs text-slate-600 mt-1 ml-4">{s.summary}</p>
+                          )}
+                          {s.issuesWorked && s.issuesWorked.length > 0 && (
+                            <div className="flex gap-1 mt-1 ml-4 flex-wrap">
+                              {s.issuesWorked.map((key) => (
+                                <span key={key} className="text-xs bg-gray-100 text-slate-600 px-1.5 py-0.5 rounded font-mono">{key}</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </Card>

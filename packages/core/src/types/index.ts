@@ -4,6 +4,8 @@ import type {
   apiKeys,
   projects,
   epics,
+  workSessions,
+  contextSnapshots,
   issues,
   dependencies,
   wikiPages,
@@ -55,6 +57,12 @@ export type NewComment = typeof comments.$inferInsert;
 
 export type EpicLock = typeof epicLocks.$inferSelect;
 export type NewEpicLock = typeof epicLocks.$inferInsert;
+
+export type WorkSession = typeof workSessions.$inferSelect;
+export type NewWorkSession = typeof workSessions.$inferInsert;
+
+export type ContextSnapshot = typeof contextSnapshots.$inferSelect;
+export type NewContextSnapshot = typeof contextSnapshots.$inferInsert;
 
 // ─── Enum Value Types ───────────────────────────────────────────────────────
 
@@ -353,6 +361,38 @@ export const AcquireLockInput = z.object({
   metadata: z.record(z.unknown()).optional(),
 });
 export type AcquireLockInput = z.infer<typeof AcquireLockInput>;
+
+// ─── Work Session / Context Snapshot Inputs ────────────────────────────────
+
+export type SessionStatus = "active" | "completed" | "abandoned";
+export type SnapshotType = "progress" | "handoff" | "compact";
+
+export const CreateWorkSessionInput = z.object({
+  workspaceId: z.string().uuid(),
+  projectId: z.string().uuid().nullable().optional(),
+  epicId: z.string().uuid().nullable().optional(),
+  sessionId: z.string().min(1).max(255),
+  agentName: z.string().max(255).optional(),
+  metadata: z.record(z.unknown()).optional(),
+});
+export type CreateWorkSessionInput = z.infer<typeof CreateWorkSessionInput>;
+
+export const EndWorkSessionInput = z.object({
+  summary: z.string().optional(),
+  issuesWorked: z.array(z.string()).optional(),
+});
+export type EndWorkSessionInput = z.infer<typeof EndWorkSessionInput>;
+
+export const SaveContextSnapshotInput = z.object({
+  workspaceId: z.string().uuid(),
+  projectId: z.string().uuid(),
+  sessionId: z.string().max(255).optional(),
+  agentName: z.string().max(255).optional(),
+  snapshotType: z.enum(["progress", "handoff", "compact"]).optional(),
+  content: z.string().min(1),
+  metadata: z.record(z.unknown()).optional(),
+});
+export type SaveContextSnapshotInput = z.infer<typeof SaveContextSnapshotInput>;
 
 // ─── Filter Types ───────────────────────────────────────────────────────────
 

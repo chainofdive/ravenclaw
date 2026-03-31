@@ -392,10 +392,72 @@ export class RavenclawApiClient {
   async getRecentComments(limit?: number): Promise<unknown[]> {
     const params = new URLSearchParams();
     if (limit) params.set("limit", String(limit));
-    // Use workspace-level endpoint via query
     return this.request<unknown[]>(
       "GET",
       `/comments/recent${params.toString() ? `?${params.toString()}` : ""}`,
+    );
+  }
+
+  // ── Sessions ──────────────────────────────────────────────────────
+
+  async startSession(input: {
+    projectId?: string;
+    sessionId: string;
+    agentName?: string;
+    epicId?: string;
+  }): Promise<unknown> {
+    return this.request<unknown>("POST", "/sessions", input);
+  }
+
+  async endSession(
+    sessionId: string,
+    input: { summary?: string; issuesWorked?: string[] },
+  ): Promise<unknown> {
+    return this.request<unknown>("PUT", "/sessions/end-by-session", {
+      sessionId,
+      ...input,
+    });
+  }
+
+  async listSessions(
+    projectId?: string,
+    limit?: number,
+  ): Promise<unknown[]> {
+    const params = new URLSearchParams();
+    if (projectId) params.set("project_id", projectId);
+    if (limit) params.set("limit", String(limit));
+    const qs = params.toString();
+    return this.request<unknown[]>("GET", `/sessions${qs ? `?${qs}` : ""}`);
+  }
+
+  // ── Context Snapshots ─────────────────────────────────────────────
+
+  async saveSnapshot(input: {
+    projectId: string;
+    content: string;
+    snapshotType?: string;
+    agentName?: string;
+    sessionId?: string;
+  }): Promise<unknown> {
+    return this.request<unknown>("POST", "/sessions/snapshots", input);
+  }
+
+  async getLatestSnapshot(projectId: string): Promise<unknown> {
+    return this.request<unknown>(
+      "GET",
+      `/sessions/snapshots/latest?project_id=${encodeURIComponent(projectId)}`,
+    );
+  }
+
+  async listSnapshots(
+    projectId: string,
+    limit?: number,
+  ): Promise<unknown[]> {
+    const params = new URLSearchParams({ project_id: projectId });
+    if (limit) params.set("limit", String(limit));
+    return this.request<unknown[]>(
+      "GET",
+      `/sessions/snapshots?${params.toString()}`,
     );
   }
 }

@@ -72,6 +72,18 @@ export const activityActionEnum = pgEnum("activity_action", [
   "deleted",
 ]);
 
+export const sessionStatusEnum = pgEnum("session_status", [
+  "active",
+  "completed",
+  "abandoned",
+]);
+
+export const snapshotTypeEnum = pgEnum("snapshot_type", [
+  "progress",
+  "handoff",
+  "compact",
+]);
+
 export const conceptTypeEnum = pgEnum("concept_type", [
   "technology",
   "domain",
@@ -551,3 +563,77 @@ export const activityLogRelations = relations(activityLog, ({ one }) => ({
     references: [workspaces.id],
   }),
 }));
+
+// ─── Work Sessions ──────────────────────────────────────────────────────────
+
+export const workSessions = pgTable("work_sessions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  projectId: uuid("project_id").references(() => projects.id, {
+    onDelete: "cascade",
+  }),
+  epicId: uuid("epic_id").references(() => epics.id, { onDelete: "set null" }),
+  sessionId: varchar("session_id", { length: 255 }).notNull(),
+  agentName: varchar("agent_name", { length: 255 }).notNull().default("unknown"),
+  status: sessionStatusEnum("status").notNull().default("active"),
+  summary: text("summary"),
+  issuesWorked: text("issues_worked").array(),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
+  startedAt: timestamp("started_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  endedAt: timestamp("ended_at", { withTimezone: true }),
+});
+
+export const workSessionsRelations = relations(workSessions, ({ one }) => ({
+  workspace: one(workspaces, {
+    fields: [workSessions.workspaceId],
+    references: [workspaces.id],
+  }),
+  project: one(projects, {
+    fields: [workSessions.projectId],
+    references: [projects.id],
+  }),
+  epic: one(epics, {
+    fields: [workSessions.epicId],
+    references: [epics.id],
+  }),
+}));
+
+// ─── Context Snapshots ──────────────────────────────────────────────────────
+
+export const contextSnapshots = pgTable("context_snapshots", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  projectId: uuid("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  sessionId: varchar("session_id", { length: 255 }),
+  agentName: varchar("agent_name", { length: 255 }).notNull().default("unknown"),
+  snapshotType: snapshotTypeEnum("snapshot_type").notNull().default("progress"),
+  content: text("content").notNull(),
+  metadata: jsonb("metadata")
+    .$type<Record<string, unknown>>()
+    .default({}),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const contextSnapshotsRelations = relations(
+  contextSnapshots,
+  ({ one }) => ({
+    workspace: one(workspaces, {
+      fields: [contextSnapshots.workspaceId],
+      references: [workspaces.id],
+    }),
+    project: one(projects, {
+      fields: [contextSnapshots.projectId],
+      references: [projects.id],
+    }),
+  }),
+);

@@ -13,55 +13,81 @@ When installed as a plugin, the MCP server and API credentials are configured au
 - **Epic** = a phase or milestone within a project. Use `create_epic(project_id: "RC-P1", ...)`.
 - **Issue** = an individual task within an epic. Use `create_issue(epic_id: "RC-E1", ...)`.
 - **Ordering** = use `add_dependency` between epics (phase order) or between issues (task order).
-  - Example: `add_dependency(source_type: "epic", source_id: "RC-E2", target_type: "epic", target_id: "RC-E1", dependency_type: "depends_on")` means Phase 2 starts after Phase 1.
 
 ## Steps
 
-### 1. Load Work Context
+### 1. Load Previous Context
 
-First, get the full work context. If the Ravenclaw MCP server is available (auto-configured when installed as a plugin), use the `get_work_context` tool. Otherwise, run the CLI:
+**IMPORTANT:** Before anything else, check if a previous agent left context:
 
+```
+get_latest_context(project_id: "RC-P1")
+```
+
+This shows what the previous agent accomplished, decisions made, blockers, and next steps.
+
+### 2. Load Work Context
+
+Get the full work context for the project:
+
+```
+get_project(key: "RC-P1")   — project tree with epics and issues
+get_work_context             — full workspace context
+```
+
+Or via CLI:
 ```bash
+rc project show RC-P1
 rc context
 ```
 
-### 2. Review Active Work
+### 3. Start Work Session
 
-Check what's currently in progress:
-```bash
-rc issue list --status=in_progress --format=table
+Record your session start:
+```
+start_work_session(project_id: "RC-P1", session_id: "<your-session-id>", agent_name: "claude-code")
 ```
 
-Check what's blocked or ready to start:
-```bash
-rc issue list --status=todo --format=table
-```
-
-### 3. Check User Comments
+### 4. Check User Comments
 
 If working on a specific issue, check for user comments/feedback:
-```bash
-rc comment list issue <issue-id>
+```
+list_comments(entity_type: "issue", entity_id: "RC-I26")
 ```
 
-### 4. Start Working
+### 5. Work on Issues
 
-Pick an issue to work on and mark it:
-```bash
-rc issue start <key>
+```
+start_issue(id: "RC-I26")   — mark as in_progress
+# ... do work ...
+complete_issue(id: "RC-I26") — mark as done
 ```
 
-### 5. When Done
+### 6. Save Context (Periodically)
 
-Update the issue and add any relevant wiki documentation:
-```bash
-rc issue done <key>
-rc wiki write <topic-slug>
+**Save your progress regularly** so the next agent can continue:
+
+```
+save_context(
+  project_id: "RC-P1",
+  content: "## Progress\n- Completed RC-I26 (card data structure)\n- RC-I27 in progress — deck shuffling works but draw logic needs edge case handling\n\n## Decisions\n- Using Fisher-Yates for shuffle\n\n## Next Steps\n- Finish RC-I27 draw edge cases\n- Start RC-I28 (hand UI)",
+  snapshot_type: "progress"
+)
+```
+
+### 7. End Session
+
+Before ending, save a final handoff context and end the session:
+
+```
+save_context(project_id: "RC-P1", content: "...", snapshot_type: "handoff")
+end_work_session(session_id: "<your-session-id>", summary: "Completed 3 issues", issues_worked: ["RC-I26", "RC-I27", "RC-I28"])
 ```
 
 ## Tips
 
-- Use `rc context --compact` for a token-efficient summary
+- **Always call `get_latest_context` first** — it's how you inherit previous work
+- **Save context frequently** — at minimum before ending your session
+- Use `list_work_sessions(project_id: "RC-P1")` to see who worked on the project before
 - Use `rc search "keyword"` to find relevant epics, issues, or wiki pages
 - Always read comments before starting — the user may have specific instructions
-- Update the wiki with architectural decisions or important context for future agents

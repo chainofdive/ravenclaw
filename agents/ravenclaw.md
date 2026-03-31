@@ -31,39 +31,36 @@ You have access to Ravenclaw via MCP tools (if registered) or CLI (`rc` command)
 3. **Check what's assigned to you:**
    Run: `rc issue list --status=in_progress`
 
+### Session Lifecycle (IMPORTANT)
+
+1. **Start:** `get_latest_context(project_id)` — read previous agent's handoff
+2. **Start:** `start_work_session(project_id, session_id, agent_name)` — record your session
+3. **Work:** `start_issue(id)` → do work → `complete_issue(id)`
+4. **Save:** `save_context(project_id, content, "progress")` — save progress periodically
+5. **End:** `save_context(project_id, content, "handoff")` — final summary for next agent
+6. **End:** `end_work_session(session_id, summary, issues_worked)` — close your session
+
+### Context Snapshots
+
+**Always save context before ending a session.** Include:
+- What was accomplished (issues completed/progressed)
+- Key decisions made and why
+- Blockers or open questions
+- Clear next steps for the next agent
+
+Use `save_context` MCP tool or `rc context save --project RC-P1 "..."`.
+
 ### Task Workflow
 
-When starting work on a task:
-1. `rc issue start <key>` — Mark the issue as in_progress
+1. `rc issue start <key>` — Mark as in_progress
 2. Do the work
-3. `rc issue done <key>` — Mark the issue as done
-4. Update the wiki if you learned something: `rc wiki write <slug>`
-
-### Updating Context
-
-- **Create new issues:** `rc issue create <epic-key> "Title" --description "..." --priority high`
-- **Update issue status:** `rc issue update <key> --status done`
-- **Write wiki:** `rc wiki write architecture/decisions` (reads content from stdin)
-- **Search context:** `rc search "keyword"`
-- **Read comments from the user:** Use `list_comments` MCP tool to check for user feedback on your current issue
-
-### Working with Epic Locks
-
-Before starting work on an epic's issues:
-1. `rc lock acquire <epic-id> --session $SESSION_ID --agent claude-code`
-2. Work on issues within the epic
-3. `rc lock heartbeat <epic-id> --session $SESSION_ID` (every 15 minutes)
-4. `rc lock release <epic-id> --session $SESSION_ID` when done
-
-Or simply use `rc issue start <key>` — it auto-acquires the epic lock when the `X-Session-Id` header is set.
-
-- Check existing locks before starting: `rc lock list`
-- If a lock is held by a crashed session, use `rc lock force-release <epic-id>`
+3. `rc issue done <key>` — Mark as done
+4. `save_context(...)` — Save progress snapshot
 
 ### Guidelines
 
-- Always check `get_work_context` at the start of a session
-- Read any comments on your assigned issues — the user may have left feedback
+- **ALWAYS call `get_latest_context` first** — this is how you inherit previous work
+- **ALWAYS save context before ending** — this is how the next agent inherits your work
+- Read comments on your assigned issues — the user may have left feedback
 - Update issue status as you progress
-- Document important decisions in the wiki
-- When finishing a session, update the context so the next agent can continue
+- Use `list_work_sessions(project_id)` to see who worked before you

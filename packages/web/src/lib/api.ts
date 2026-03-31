@@ -176,6 +176,30 @@ export interface Dependency {
   dependencyType: string;
 }
 
+export interface WorkSessionInfo {
+  id: string;
+  projectId: string | null;
+  epicId: string | null;
+  sessionId: string;
+  agentName: string;
+  status: string;
+  summary: string | null;
+  issuesWorked: string[] | null;
+  startedAt: string;
+  endedAt: string | null;
+}
+
+export interface ContextSnapshotInfo {
+  id: string;
+  projectId: string;
+  sessionId: string | null;
+  agentName: string;
+  snapshotType: string;
+  content: string;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+}
+
 export const api = {
   listProjects: () => apiFetch<Project[]>('/projects'),
   getProject: (id: string) => apiFetch<Project>(`/projects/${encodeURIComponent(id)}`),
@@ -221,4 +245,16 @@ export const api = {
       method: 'DELETE',
     }),
   listLocks: () => apiFetch<EpicLockInfo[]>('/locks'),
+
+  // Sessions & Snapshots
+  listSessions: (projectId?: string) => {
+    const params = new URLSearchParams();
+    if (projectId) params.set('project_id', projectId);
+    const qs = params.toString();
+    return apiFetch<WorkSessionInfo[]>(`/sessions${qs ? `?${qs}` : ''}`);
+  },
+  listSnapshots: (projectId: string) =>
+    apiFetch<ContextSnapshotInfo[]>(`/sessions/snapshots?project_id=${encodeURIComponent(projectId)}`),
+  getLatestSnapshot: (projectId: string) =>
+    apiFetch<ContextSnapshotInfo>(`/sessions/snapshots/latest?project_id=${encodeURIComponent(projectId)}`),
 };
