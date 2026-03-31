@@ -243,7 +243,7 @@ export class RavenclawClient {
     return this.get<ProjectTree>(`/projects/${encodeURIComponent(id)}/tree`);
   }
 
-  async createProject(input: { name: string; description?: string; priority?: Priority; targetDate?: string }): Promise<Project> {
+  async createProject(input: { name: string; description?: string; priority?: Priority; targetDate?: string; directory?: string }): Promise<Project> {
     return this.post<Project>('/projects', input);
   }
 

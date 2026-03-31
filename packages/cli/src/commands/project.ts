@@ -61,6 +61,7 @@ export function createProjectCommand(): Command {
     .option('-d, --description <desc>', 'Project description')
     .option('-p, --priority <priority>', 'Priority (critical|high|medium|low)', 'medium')
     .option('-t, --target-date <date>', 'Target date (ISO 8601)')
+    .option('--directory <path>', 'Project working directory')
     .action(async (name: string, opts) => {
       const { client } = getClient();
       const spinner = ora('Creating project...').start();
@@ -71,6 +72,7 @@ export function createProjectCommand(): Command {
           description: opts.description,
           priority: opts.priority as Priority,
           targetDate: opts.targetDate,
+          directory: opts.directory,
         });
         spinner.succeed(`Project created: ${chalk.magenta(p.key)}`);
         console.log(`  ${chalk.bold(p.name)}  [${p.status}]  ${p.priority}`);
@@ -131,11 +133,13 @@ export function createProjectCommand(): Command {
     .option('-s, --status <status>', 'New status')
     .option('-p, --priority <priority>', 'New priority')
     .option('-d, --description <desc>', 'New description')
+    .option('--directory <path>', 'Project working directory')
     .action(async (key: string, opts) => {
       const { client } = getClient();
 
       const input: Record<string, unknown> = {};
       if (opts.name) input.name = opts.name;
+      if (opts.directory) input.directory = opts.directory;
       if (opts.status) input.status = opts.status;
       if (opts.priority) input.priority = opts.priority;
       if (opts.description) input.description = opts.description;
