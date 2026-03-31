@@ -63,6 +63,7 @@ export class ProjectService {
         key,
         name: input.name,
         description: input.description ?? "",
+        directory: input.directory ?? null,
         status: input.status ?? "planning",
         priority: input.priority ?? "medium",
         metadata: input.metadata ?? {},
@@ -78,6 +79,7 @@ export class ProjectService {
     const updateData: Record<string, unknown> = {};
     if (input.name !== undefined) updateData.name = input.name;
     if (input.description !== undefined) updateData.description = input.description;
+    if (input.directory !== undefined) updateData.directory = input.directory;
     if (input.status !== undefined) updateData.status = input.status;
     if (input.priority !== undefined) updateData.priority = input.priority;
     if (input.metadata !== undefined) updateData.metadata = input.metadata;

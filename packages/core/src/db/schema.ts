@@ -170,6 +170,7 @@ export const projects = pgTable("projects", {
   key: varchar("key", { length: 20 }).notNull(),
   name: varchar("name", { length: 500 }).notNull(),
   description: text("description").notNull().default(""),
+  directory: varchar("directory", { length: 1000 }),
   status: projectStatusEnum("status").notNull().default("planning"),
   priority: priorityEnum("priority").notNull().default("medium"),
   metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
@@ -720,6 +721,12 @@ export const humanInputRequestsRelations = relations(
 
 // ─── Agent Workers ──────────────────────────────────────────────────────────
 
+export const agentTypeEnum = pgEnum("agent_type", [
+  "claude-code",
+  "gemini-cli",
+  "codex",
+]);
+
 export const agentWorkers = pgTable("agent_workers", {
   id: uuid("id").primaryKey().defaultRandom(),
   workspaceId: uuid("workspace_id")
@@ -727,7 +734,7 @@ export const agentWorkers = pgTable("agent_workers", {
     .references(() => workspaces.id, { onDelete: "cascade" }),
   name: varchar("name", { length: 255 }).notNull(),
   status: workerStatusEnum("status").notNull().default("idle"),
-  agentType: varchar("agent_type", { length: 100 }).notNull().default("claude-code"),
+  agentType: agentTypeEnum("agent_type").notNull().default("claude-code"),
   currentDirectiveId: uuid("current_directive_id"),
   processId: integer("process_id"),
   config: jsonb("config").$type<Record<string, unknown>>().default({}),

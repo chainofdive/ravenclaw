@@ -16,7 +16,8 @@ export function Agents() {
   // New directive form
   const [instruction, setInstruction] = useState('');
   const [selectedProject, setSelectedProject] = useState('');
-  const [newWorkerName, setNewWorkerName] = useState('');
+  const [newAgentName, setNewAgentName] = useState('');
+  const [newAgentType, setNewAgentType] = useState('claude-code');
 
   const load = useCallback(() => {
     api.listAgents().then(setWorkers).catch((e) => setError(e.message));
@@ -30,18 +31,18 @@ export function Agents() {
     return () => clearInterval(interval);
   }, [load]);
 
-  const handleCreateWorker = async () => {
-    if (!newWorkerName.trim()) return;
+  const handleCreateAgent = async () => {
+    if (!newAgentName.trim()) return;
     try {
-      await api.createAgent({ name: newWorkerName.trim() });
-      setNewWorkerName('');
+      await api.createAgent({ name: newAgentName.trim(), agentType: newAgentType });
+      setNewAgentName('');
       load();
     } catch (e: any) {
       setError(e.message);
     }
   };
 
-  const handleDeleteWorker = async (id: string) => {
+  const handleDeleteAgent = async (id: string) => {
     try {
       await api.deleteAgent(id);
       load();
@@ -182,7 +183,7 @@ export function Agents() {
                 </span>
                 <span className="text-xs text-slate-400">{w.agentType}</span>
                 <button
-                  onClick={() => handleDeleteWorker(w.id)}
+                  onClick={() => handleDeleteAgent(w.id)}
                   className="text-xs text-slate-400 hover:text-red-500 ml-auto transition-colors"
                 >
                   remove
@@ -196,15 +197,24 @@ export function Agents() {
             <div className="flex gap-2 pt-2">
               <input
                 type="text"
-                value={newWorkerName}
-                onChange={(e) => setNewWorkerName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleCreateWorker()}
+                value={newAgentName}
+                onChange={(e) => setNewAgentName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleCreateAgent()}
                 placeholder="Agent name..."
                 className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-300"
               />
+              <select
+                value={newAgentType}
+                onChange={(e) => setNewAgentType(e.target.value)}
+                className="text-xs border border-gray-200 rounded-lg px-2 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-teal-300"
+              >
+                <option value="claude-code">Claude Code</option>
+                <option value="gemini-cli">Gemini CLI</option>
+                <option value="codex">Codex</option>
+              </select>
               <button
-                onClick={handleCreateWorker}
-                disabled={!newWorkerName.trim()}
+                onClick={handleCreateAgent}
+                disabled={!newAgentName.trim()}
                 className="px-3 py-2 text-sm font-medium bg-teal-500 text-white rounded-lg hover:bg-teal-600 disabled:opacity-50 transition-colors"
               >
                 Add

@@ -141,6 +141,9 @@ export function Projects() {
                   {selectedProject.description && (
                     <p className="text-xs text-slate-500 mt-0.5">{selectedProject.description}</p>
                   )}
+                  {selectedProject.directory && (
+                    <p className="text-xs text-slate-400 mt-0.5 font-mono">{selectedProject.directory}</p>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <PriorityBadge priority={selectedProject.priority} />

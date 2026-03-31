@@ -29,35 +29,24 @@ export class ProcessManager extends EventEmitter {
   }
 
   /**
-   * Spawn a claude process to execute a directive.
+   * Spawn an agent process to execute a directive.
+   * Supports claude-code, gemini-cli, and codex.
    */
   async spawn(
     directiveId: string,
     agentId: string,
     instruction: string,
     config?: {
+      agentType?: string;
       model?: string;
       cwd?: string;
       allowedTools?: string[];
     },
   ): Promise<ProcessInfo> {
-    const args = [
-      "-p",
-      instruction,
-      "--output-format",
-      "text",
-      "--verbose",
-    ];
+    const agentType = config?.agentType ?? "claude-code";
+    const { command, args } = this.buildCommand(agentType, instruction, config);
 
-    if (config?.model) {
-      args.push("--model", config.model);
-    }
-
-    if (config?.allowedTools && config.allowedTools.length > 0) {
-      args.push("--allowedTools", config.allowedTools.join(","));
-    }
-
-    const child = spawn("claude", args, {
+    const child = spawn(command, args, {
       cwd: config?.cwd ?? process.cwd(),
       env: { ...process.env },
       stdio: ["ignore", "pipe", "pipe"],
@@ -192,5 +181,47 @@ export class ProcessManager extends EventEmitter {
       startedAt: p.startedAt,
       logLines: p.logs.length,
     }));
+  }
+
+  /**
+   * Build the command and args for a given agent type.
+   */
+  private buildCommand(
+    agentType: string,
+    instruction: string,
+    config?: { model?: string; allowedTools?: string[] },
+  ): { command: string; args: string[] } {
+    switch (agentType) {
+      case "gemini-cli": {
+        // Gemini CLI: gemini -p "prompt"
+        const args = ["-p", instruction];
+        if (config?.model) args.push("--model", config.model);
+        return { command: "gemini", args };
+      }
+
+      case "codex": {
+        // OpenAI Codex CLI: codex -q "prompt"
+        const args = ["-q", instruction];
+        if (config?.model) args.push("--model", config.model);
+        return { command: "codex", args };
+      }
+
+      case "claude-code":
+      default: {
+        // Claude Code: claude -p "prompt" --output-format text --verbose
+        const args = [
+          "-p",
+          instruction,
+          "--output-format",
+          "text",
+          "--verbose",
+        ];
+        if (config?.model) args.push("--model", config.model);
+        if (config?.allowedTools && config.allowedTools.length > 0) {
+          args.push("--allowedTools", config.allowedTools.join(","));
+        }
+        return { command: "claude", args };
+      }
+    }
   }
 }

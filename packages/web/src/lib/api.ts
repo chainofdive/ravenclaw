@@ -31,6 +31,7 @@ export interface Project {
   key: string;
   name: string;
   description: string;
+  directory: string | null;
   status: string;
   priority: string;
   metadata: Record<string, unknown>;

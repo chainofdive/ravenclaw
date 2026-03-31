@@ -133,6 +133,7 @@ export const CreateProjectInput = z.object({
   workspaceId: z.string().uuid(),
   name: z.string().min(1).max(500),
   description: z.string().optional(),
+  directory: z.string().max(1000).optional(),
   status: z.enum(["planning", "active", "completed", "on_hold", "cancelled"]).optional(),
   priority: z.enum(["critical", "high", "medium", "low"]).optional(),
   metadata: z.record(z.unknown()).optional(),
@@ -144,6 +145,7 @@ export type CreateProjectInput = z.infer<typeof CreateProjectInput>;
 export const UpdateProjectInput = z.object({
   name: z.string().min(1).max(500).optional(),
   description: z.string().optional(),
+  directory: z.string().max(1000).nullable().optional(),
   status: z.enum(["planning", "active", "completed", "on_hold", "cancelled"]).optional(),
   priority: z.enum(["critical", "high", "medium", "low"]).optional(),
   metadata: z.record(z.unknown()).optional(),
@@ -435,11 +437,12 @@ export type AnswerHumanInputInput = z.infer<typeof AnswerHumanInputInput>;
 
 export type WorkerStatus = "idle" | "running" | "paused" | "stopped" | "error";
 export type DirectiveStatus = "pending" | "assigned" | "running" | "completed" | "failed" | "cancelled";
+export type AgentType = "claude-code" | "gemini-cli" | "codex";
 
 export const CreateAgentInput = z.object({
   workspaceId: z.string().uuid(),
   name: z.string().min(1).max(255),
-  agentType: z.string().max(100).optional(),
+  agentType: z.enum(["claude-code", "gemini-cli", "codex"]).optional(),
   config: z.record(z.unknown()).optional(),
 });
 export type CreateAgentInput = z.infer<typeof CreateAgentInput>;

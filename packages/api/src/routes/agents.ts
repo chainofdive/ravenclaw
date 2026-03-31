@@ -135,10 +135,19 @@ agents.post("/directives/:id/dispatch", async (c) => {
 
   // Auto-spawn process if autoRun is not false
   if (body.autoRun !== false) {
+    // Resolve project directory for cwd
+    let cwd = body.cwd;
+    if (!cwd && directive!.projectId) {
+      const projectService = c.get("projectService");
+      const project = await projectService.getById(directive!.projectId);
+      if (project?.directory) cwd = project.directory;
+    }
+
     try {
       await pm.spawn(id, agent!.id, directive!.instruction, {
+        agentType: agent!.agentType,
         model: body.model,
-        cwd: body.cwd,
+        cwd,
       });
       await agentService.startDirective(id);
     } catch (err: any) {
@@ -216,9 +225,20 @@ agents.post("/dispatch", async (c) => {
     return c.json({ data: { dispatched: false, reason: "No pending directives or idle agents" } });
   }
 
+  // Resolve project directory
+  let cwd: string | undefined;
+  if (result.directive.projectId) {
+    const projectService = c.get("projectService");
+    const project = await projectService.getById(result.directive.projectId);
+    if (project?.directory) cwd = project.directory;
+  }
+
   // Auto-spawn
   try {
-    await pm.spawn(result.directive.id, result.worker.id, result.directive.instruction);
+    await pm.spawn(result.directive.id, result.worker.id, result.directive.instruction, {
+      agentType: result.worker.agentType,
+      cwd,
+    });
     await agentService.startDirective(result.directive.id);
   } catch (err: any) {
     await agentService.failDirective(result.directive.id, `Spawn failed: ${err.message}`);
