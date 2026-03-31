@@ -112,6 +112,13 @@ export class RavenclawApiClient {
     );
   }
 
+  async deleteEpic(id: string): Promise<unknown> {
+    return this.request<unknown>(
+      "DELETE",
+      `/epics/${encodeURIComponent(id)}`,
+    );
+  }
+
   // ── Issues ──────────────────────────────────────────────────────────
 
   async listIssues(filters?: {
@@ -159,6 +166,13 @@ export class RavenclawApiClient {
     return this.request<unknown>(
       "POST",
       `/issues/${encodeURIComponent(id)}/done`,
+    );
+  }
+
+  async deleteIssue(id: string): Promise<unknown> {
+    return this.request<unknown>(
+      "DELETE",
+      `/issues/${encodeURIComponent(id)}`,
     );
   }
 

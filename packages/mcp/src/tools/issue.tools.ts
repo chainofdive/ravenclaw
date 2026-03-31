@@ -156,4 +156,17 @@ export function registerIssueTools(
       return { content: [{ type: "text", text }] };
     },
   );
+
+  // ── delete_issue ───────────────────────────────────────────────────
+  server.tool(
+    "delete_issue",
+    "Delete an issue",
+    {
+      id: z.string().describe("Issue ID (UUID) or key (e.g. RC-I3)"),
+    },
+    async ({ id }) => {
+      await client.deleteIssue(id);
+      return { content: [{ type: "text", text: `Issue ${id} deleted.` }] };
+    },
+  );
 }

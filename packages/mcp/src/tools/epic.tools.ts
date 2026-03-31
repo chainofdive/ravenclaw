@@ -110,4 +110,17 @@ export function registerEpicTools(
       return { content: [{ type: "text", text }] };
     },
   );
+
+  // ── delete_epic ─────────────────────────────────────────────────────
+  server.tool(
+    "delete_epic",
+    "Delete an epic (sets status to cancelled)",
+    {
+      id: z.string().describe("Epic ID (UUID) or key (e.g. RC-E1)"),
+    },
+    async ({ id }) => {
+      await client.deleteEpic(id);
+      return { content: [{ type: "text", text: `Epic ${id} deleted.` }] };
+    },
+  );
 }

@@ -203,6 +203,42 @@ export function createIssueCommand(): Command {
       }
     });
 
+  // ── issue delete ────────────────────────────────────────────────────────
+  issue
+    .command('delete <key>')
+    .description('Delete an issue')
+    .option('-y, --yes', 'Skip confirmation')
+    .action(async (key: string, opts) => {
+      const { client } = getClient();
+
+      if (!opts.yes) {
+        const { createInterface } = await import('node:readline/promises');
+        const { stdin, stdout } = await import('node:process');
+        const rl = createInterface({ input: stdin, output: stdout });
+        try {
+          const answer = await rl.question(
+            chalk.yellow(`  Are you sure you want to delete issue "${key}"? (y/N): `),
+          );
+          if (answer.trim().toLowerCase() !== 'y') {
+            console.log(chalk.dim('  Cancelled.'));
+            return;
+          }
+        } finally {
+          rl.close();
+        }
+      }
+
+      const spinner = ora('Deleting issue...').start();
+
+      try {
+        await client.deleteIssue(key);
+        spinner.succeed(`Issue ${chalk.yellow(key)} deleted.`);
+      } catch (err) {
+        spinner.fail('Failed to delete issue');
+        handleError(err);
+      }
+    });
+
   return issue;
 }
 
