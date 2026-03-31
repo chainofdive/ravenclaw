@@ -56,15 +56,19 @@ Ravenclaw is a self-hosted system that gives AI coding agents persistent memory 
 ```
 Workspace
   └─ Project (RC-P1: SURVIVE)          ← product/game/campaign
+       │  directory: /path/to/survive   ← agents run in this directory
        ├─ Epic (RC-E10: Phase 1)       ← phase/milestone (depends_on other epics)
        │    ├─ Issue (RC-I26: Card data)  ← individual task
        │    └─ Issue (RC-I27: Deck mgr)   ← depends_on RC-I26
        ├─ Epic (RC-E11: Phase 2)       ← depends_on RC-E10
        │    └─ Issue (RC-I35: Rounds)
        └─ ...
+
+  └─ Agent (claude-code | gemini-cli | codex)
+       └─ Directives → dispatched to project directory
 ```
 
-Additional entities: Wiki pages, Ontology (concepts + relations), Comments, Dependencies, Work sessions, Context snapshots, Human input requests, Agent workers, Work directives.
+Additional entities: Wiki pages, Ontology (concepts + relations), Comments, Dependencies, Work sessions, Context snapshots, Human input requests, Work directives.
 
 ## Quick Start
 
@@ -103,7 +107,8 @@ The dashboard provides a project-centric workspace:
 - Command panel: chat-style directive interface to instruct agents
 - History tab: context snapshots and work session timeline
 - Human input requests: pending questions from agents with answer UI
-- Agents page: register/manage agents, view directive queue
+- Agents page: register agents (Claude Code / Gemini CLI / Codex), view directive queue
+- Collapsible sidebar, resizable panels
 
 ## Agent Workflow
 
@@ -130,8 +135,9 @@ Agent starts
 ## CLI Reference
 
 ```bash
-# Projects
-rc project list / show / create / update / delete
+# Projects (--directory for working dir, --priority, --status)
+rc project create "SURVIVE" --directory /path/to/survive --priority high
+rc project list / show / update / delete
 
 # Epics
 rc epic list / show / create / update / delete

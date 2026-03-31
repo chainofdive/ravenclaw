@@ -96,8 +96,8 @@ Ravenclaw 작업 컨텍스트를 확인해줘.
 ## 새 프로젝트 등록 시
 
 ```bash
-# 1. 프로젝트 생성
-rc project create "SURVIVE" --description "포커 기반 로그라이크 게임" --priority high
+# 1. 프로젝트 생성 (디렉토리 지정 — 에이전트가 이 경로에서 실행됨)
+rc project create "SURVIVE" --description "포커 기반 로그라이크 게임" --priority high --directory /path/to/survive
 
 # 2. 에픽(단계) 생성 — project key 지정
 # MCP: create_epic(project_id: "RC-P1", title: "Phase 1 - 코어 루프")
@@ -168,8 +168,8 @@ rc issue create RC-E1 "카드 데이터 구조 구현" --priority critical
 # 프로젝트
 rc project list                # 프로젝트 목록
 rc project show RC-P1          # 프로젝트 트리 (에픽 + 이슈)
-rc project create "이름"        # 프로젝트 생성
-rc project update RC-P1 --status active
+rc project create "이름" --directory /path/to/project
+rc project update RC-P1 --status active --directory /new/path
 rc project delete RC-P1
 
 # 에픽
