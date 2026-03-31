@@ -452,4 +452,46 @@ export class RavenclawClient {
       limit: limit?.toString(),
     });
   }
+
+  // ── Sessions ──────────────────────────────────────────────────────
+
+  async startSession(input: { projectId?: string; sessionId: string; agentName?: string }): Promise<Record<string, unknown>> {
+    return this.post<Record<string, unknown>>('/sessions', input);
+  }
+
+  async endSession(sessionId: string, input: { summary?: string; issuesWorked?: string[] }): Promise<Record<string, unknown>> {
+    return this.put<Record<string, unknown>>('/sessions/end-by-session', { sessionId, ...input });
+  }
+
+  async listSessions(projectId?: string): Promise<Record<string, unknown>[]> {
+    return this.get<Record<string, unknown>[]>('/sessions', { project_id: projectId });
+  }
+
+  // ── Context Snapshots ─────────────────────────────────────────────
+
+  async saveSnapshot(input: { projectId: string; content: string; snapshotType?: string; agentName?: string }): Promise<Record<string, unknown>> {
+    return this.post<Record<string, unknown>>('/sessions/snapshots', input);
+  }
+
+  async getLatestSnapshot(projectId: string): Promise<Record<string, unknown>> {
+    return this.get<Record<string, unknown>>(`/sessions/snapshots/latest`, { project_id: projectId });
+  }
+
+  async listSnapshots(projectId: string, limit?: number): Promise<Record<string, unknown>[]> {
+    return this.get<Record<string, unknown>[]>('/sessions/snapshots', { project_id: projectId, limit: limit?.toString() });
+  }
+
+  // ── Human Input Requests ──────────────────────────────────────────
+
+  async requestHumanInput(input: { question: string; projectId?: string; urgency?: string; options?: string[]; context?: string }): Promise<Record<string, unknown>> {
+    return this.post<Record<string, unknown>>('/input-requests', input);
+  }
+
+  async checkHumanInput(id: string): Promise<{ status: string; answer?: string }> {
+    return this.get<{ status: string; answer?: string }>(`/input-requests/${encodeURIComponent(id)}/check`);
+  }
+
+  async listWaitingInputs(): Promise<Record<string, unknown>[]> {
+    return this.get<Record<string, unknown>[]>('/input-requests/waiting');
+  }
 }

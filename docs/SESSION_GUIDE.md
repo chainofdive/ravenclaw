@@ -140,6 +140,17 @@ rc issue create RC-E1 "카드 데이터 구조 구현" --priority critical
 | `add_dependency` | 에픽 간/이슈 간 의존성 추가 |
 | `list_dependencies` | 의존성 조회 |
 | `remove_dependency` | 의존성 제거 |
+| **세션 & 스냅샷** | |
+| `save_context` | 진행 상황 스냅샷 저장 |
+| `get_latest_context` | 최신 스냅샷 로드 (핸드오프) |
+| `list_context_snapshots` | 스냅샷 히스토리 |
+| `start_work_session` | 작업 세션 시작 기록 |
+| `end_work_session` | 작업 세션 종료 |
+| `list_work_sessions` | 세션 히스토리 |
+| **Human Input** | |
+| `request_human_input` | 사용자에게 질문 (웹 UI에서 답변) |
+| `check_human_input` | 답변 확인 (폴링) |
+| `list_pending_inputs` | 대기 중 질문 목록 |
 | **컨텍스트** | |
 | `get_work_context` | 전체 작업 컨텍스트 |
 | `get_work_context_summary` | 요약 컨텍스트 (토큰 절약) |
@@ -175,8 +186,18 @@ rc issue start RC-I3
 rc issue done RC-I3
 rc issue delete RC-I3
 
-# 컨텍스트 / 위키 / 검색
-rc context
+# 컨텍스트 & 스냅샷
+rc context                                 # 전체 컨텍스트
+rc context save RC-P1 "진행 상황..."       # 스냅샷 저장
+rc context latest RC-P1                    # 최신 스냅샷 확인
+rc context history RC-P1                   # 스냅샷 히스토리
+
+# 세션
+rc session start -p RC-P1 -s my-session    # 세션 시작
+rc session end -s my-session --summary "..." # 세션 종료
+rc session list -p RC-P1                   # 세션 히스토리
+
+# 위키 / 검색
 rc wiki list
 rc search "키워드"
 

@@ -66,6 +66,78 @@ export function createContextCommand(): Command {
       }
     });
 
+  // ── context save ──────────────────────────────────────────────────────
+  context
+    .command('save <project-key> <content>')
+    .description('Save a context snapshot for a project')
+    .option('-t, --type <type>', 'Snapshot type (progress|handoff|compact)', 'progress')
+    .option('-a, --agent <name>', 'Agent name', 'cli')
+    .action(async (projectKey: string, content: string, opts) => {
+      const { client } = getClient();
+      const spinner = ora('Saving context...').start();
+
+      try {
+        const snapshot = await client.saveSnapshot({
+          projectId: projectKey,
+          content,
+          snapshotType: opts.type,
+          agentName: opts.agent,
+        });
+        spinner.succeed(`Context saved (${opts.type})`);
+        console.log(chalk.dim(`  ID: ${(snapshot as any).id}`));
+      } catch (err) {
+        spinner.fail('Failed to save context');
+        handleError(err);
+      }
+    });
+
+  // ── context latest ───────────────────────────────────────────────────
+  context
+    .command('latest <project-key>')
+    .description('Show latest context snapshot for a project')
+    .action(async (projectKey: string) => {
+      const { client } = getClient();
+      const spinner = ora('Loading latest context...').start();
+
+      try {
+        const snapshot = await client.getLatestSnapshot(projectKey) as any;
+        spinner.stop();
+        console.log(chalk.dim(`[${new Date(snapshot.createdAt).toLocaleString()}] ${snapshot.snapshotType} by ${snapshot.agentName}`));
+        console.log('');
+        console.log(snapshot.content);
+      } catch (err) {
+        spinner.fail('No snapshots found');
+        handleError(err);
+      }
+    });
+
+  // ── context history ──────────────────────────────────────────────────
+  context
+    .command('history <project-key>')
+    .description('List context snapshots for a project')
+    .option('-l, --limit <n>', 'Max results', '10')
+    .action(async (projectKey: string, opts) => {
+      const { client } = getClient();
+      const spinner = ora('Loading snapshots...').start();
+
+      try {
+        const snapshots = await client.listSnapshots(projectKey, parseInt(opts.limit, 10)) as any[];
+        spinner.stop();
+        if (snapshots.length === 0) {
+          console.log(chalk.gray('  No snapshots found.'));
+          return;
+        }
+        for (const s of snapshots) {
+          const date = new Date(s.createdAt).toLocaleString();
+          const preview = s.content.substring(0, 80).replace(/\n/g, ' ');
+          console.log(`  ${chalk.dim(date)}  ${chalk.cyan(s.snapshotType)}  ${chalk.yellow(s.agentName)}  ${preview}...`);
+        }
+      } catch (err) {
+        spinner.fail('Failed to load snapshots');
+        handleError(err);
+      }
+    });
+
   return context;
 }
 

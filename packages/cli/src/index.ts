@@ -12,6 +12,7 @@ import { createOntologyCommand } from './commands/ontology.js';
 import { createSearchCommand } from './commands/search.js';
 import { createCommentCommand } from './commands/comment.js';
 import { createLockCommand } from './commands/lock.js';
+import { createSessionCommand } from './commands/session.js';
 
 const program = new Command();
 
@@ -34,6 +35,7 @@ program.addCommand(createOntologyCommand());
 program.addCommand(createSearchCommand());
 program.addCommand(createCommentCommand());
 program.addCommand(createLockCommand());
+program.addCommand(createSessionCommand());
 
 // Global error handling for uncaught issues
 program.exitOverride();
