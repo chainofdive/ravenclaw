@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { Dashboard } from './pages/Dashboard';
+import { Projects } from './pages/Projects';
 import { Epics } from './pages/Epics';
 import { Issues } from './pages/Issues';
 import { Wiki } from './pages/Wiki';
@@ -18,6 +19,7 @@ export default function App() {
           <main className="flex-1 overflow-y-auto">
             <Routes>
               <Route path="/" element={<Dashboard />} />
+              <Route path="/projects" element={<Projects />} />
               <Route path="/epics" element={<Epics />} />
               <Route path="/issues" element={<Issues />} />
               <Route path="/wiki" element={<Wiki />} />

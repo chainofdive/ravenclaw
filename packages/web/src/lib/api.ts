@@ -26,9 +26,29 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   return json.data ?? json;
 }
 
+export interface Project {
+  id: string;
+  key: string;
+  name: string;
+  description: string;
+  status: string;
+  priority: string;
+  metadata: Record<string, unknown>;
+  startedAt: string | null;
+  targetDate: string | null;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProjectTree extends Project {
+  epics: (Epic & { issues: Issue[] })[];
+}
+
 export interface Epic {
   id: string;
   key: string;
+  projectId?: string | null;
   title: string;
   description: string;
   status: string;
@@ -157,6 +177,9 @@ export interface Dependency {
 }
 
 export const api = {
+  listProjects: () => apiFetch<Project[]>('/projects'),
+  getProject: (id: string) => apiFetch<Project>(`/projects/${encodeURIComponent(id)}`),
+  getProjectTree: (id: string) => apiFetch<ProjectTree>(`/projects/${encodeURIComponent(id)}/tree`),
   listEpics: () => apiFetch<Epic[]>('/epics'),
   getEpicTree: (id: string) => apiFetch<Epic>(`/epics/${id}/tree`),
   listIssues: () => apiFetch<Issue[]>('/issues'),

@@ -1,22 +1,26 @@
 import { useEffect, useState } from 'react';
-import { api, type WorkContext, type EpicLockInfo } from '../lib/api';
+import { api, type WorkContext, type EpicLockInfo, type Project } from '../lib/api';
 import { Card } from '../components/Card';
 import { StatusBadge } from '../components/StatusBadge';
+import { PriorityBadge } from '../components/PriorityBadge';
 import { ProgressBar } from '../components/ProgressBar';
 
 export function Dashboard() {
   const [ctx, setCtx] = useState<WorkContext | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [locks, setLocks] = useState<EpicLockInfo[]>([]);
   const [error, setError] = useState('');
 
   useEffect(() => {
     api.getContext().then(setCtx).catch((e) => setError(e.message));
+    api.listProjects().then(setProjects).catch(() => setProjects([]));
     api.listLocks().then(setLocks).catch(() => setLocks([]));
   }, []);
 
   if (error) return <div className="p-6 text-red-600">{error}</div>;
   if (!ctx) return <div className="p-6 text-slate-400">Loading...</div>;
 
+  const activeProjects = projects.filter((p) => p.status !== 'cancelled');
   const totalEpics = ctx.epics.length;
   const allIssues = ctx.epics.flatMap((e) => e.issues);
   const totalIssues = allIssues.length;
@@ -28,7 +32,11 @@ export function Dashboard() {
     <div className="p-6 space-y-6">
       <h2 className="text-xl font-semibold text-slate-950">Dashboard</h2>
 
-      <div className="grid grid-cols-5 gap-4">
+      <div className="grid grid-cols-6 gap-4">
+        <Card>
+          <p className="text-xs text-slate-500 uppercase tracking-wide">Projects</p>
+          <p className="text-2xl font-bold text-purple-600 mt-1">{activeProjects.length}</p>
+        </Card>
         <Card>
           <p className="text-xs text-slate-500 uppercase tracking-wide">Epics</p>
           <p className="text-2xl font-bold text-teal-600 mt-1">{totalEpics}</p>
@@ -46,19 +54,60 @@ export function Dashboard() {
           <p className="text-2xl font-bold text-emerald-600 mt-1">{completionRate}%</p>
         </Card>
         <Card>
-          <p className="text-xs text-slate-500 uppercase tracking-wide">Active Locks</p>
+          <p className="text-xs text-slate-500 uppercase tracking-wide">Locks</p>
           <p className="text-2xl font-bold text-orange-600 mt-1">{locks.length}</p>
         </Card>
       </div>
 
       <div className="grid grid-cols-2 gap-6">
+        {/* Projects overview */}
+        <Card title="Projects">
+          <div className="space-y-4">
+            {activeProjects.length === 0 && (
+              <p className="text-sm text-slate-400">No projects yet</p>
+            )}
+            {activeProjects.map((project) => {
+              // Count epics/issues for this project from context
+              const projectEpics = ctx.epics.filter((e) => e.projectId === project.id);
+              const projectIssues = projectEpics.flatMap((e) => e.issues);
+              const projectDone = projectIssues.filter((i) => i.status === 'done').length;
+              const projectTotal = projectIssues.length;
+              const projectProgress = projectTotal > 0 ? Math.round((projectDone / projectTotal) * 100) : 0;
+
+              return (
+                <div key={project.id} className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-purple-500 font-mono font-bold">{project.key}</span>
+                      <span className="text-sm font-medium text-slate-700">{project.name}</span>
+                      <PriorityBadge priority={project.priority} />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-400">{projectEpics.length} epics</span>
+                      <StatusBadge status={project.status} />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <ProgressBar value={projectProgress} className="flex-1" />
+                    <span className="text-xs text-slate-500 w-14 text-right">{projectDone}/{projectTotal}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+
+        {/* Active epics */}
         <Card title="Active Epics">
           <div className="space-y-3">
-            {ctx.epics.map((epic) => (
+            {ctx.epics.filter((e) => e.status === 'active').length === 0 && (
+              <p className="text-sm text-slate-400">No active epics</p>
+            )}
+            {ctx.epics.filter((e) => e.status === 'active').map((epic) => (
               <div key={epic.id} className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-slate-400 font-mono">{epic.key}</span>
+                    <span className="text-xs text-teal-600 font-mono">{epic.key}</span>
                     <span className="text-sm text-slate-700">{epic.title}</span>
                   </div>
                   <StatusBadge status={epic.status} />
@@ -72,6 +121,7 @@ export function Dashboard() {
           </div>
         </Card>
 
+        {/* Locked epics */}
         {locks.length > 0 && (
           <Card title="Locked Epics">
             <div className="space-y-2">
@@ -93,6 +143,7 @@ export function Dashboard() {
           </Card>
         )}
 
+        {/* Recent activity */}
         <Card title="Recent Activity">
           <div className="space-y-2">
             {ctx.recentActivity.map((a, i) => (
