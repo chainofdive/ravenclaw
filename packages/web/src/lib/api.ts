@@ -344,4 +344,10 @@ export const api = {
     apiFetch<WorkDirectiveInfo>(`/agents/directives/${encodeURIComponent(id)}/cancel`, { method: 'PUT' }),
   autoDispatch: () =>
     apiFetch<{ dispatched: boolean; directive?: WorkDirectiveInfo; worker?: AgentInfo }>('/agents/dispatch', { method: 'POST' }),
+  killDirective: (id: string) =>
+    apiFetch<{ killed: boolean }>(`/agents/directives/${encodeURIComponent(id)}/kill`, { method: 'POST' }),
+  getDirectiveLogs: (id: string) =>
+    apiFetch<{ directiveId: string; status: string; logs: string[]; logLines: number }>(`/agents/directives/${encodeURIComponent(id)}/logs`),
+  getActiveProcesses: () =>
+    apiFetch<Array<{ directiveId: string; agentId: string; status: string; pid: number; startedAt: string; logLines: number }>>('/sse/processes'),
 };

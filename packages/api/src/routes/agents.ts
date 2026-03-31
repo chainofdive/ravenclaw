@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { CreateAgentInput, CreateDirectiveInput } from "@ravenclaw/core";
 import type { AppEnv } from "../app.js";
 import { badRequest, notFound } from "../middleware/error.js";
+import type { ProcessManager } from "../process-manager.js";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -108,9 +109,10 @@ agents.get("/directives/:id", async (c) => {
   return c.json({ data: directive });
 });
 
-// POST /api/v1/directives/:id/dispatch — assign to a worker
+// POST /api/v1/directives/:id/dispatch — assign to agent and optionally spawn process
 agents.post("/directives/:id/dispatch", async (c) => {
   const agentService = c.get("agentService");
+  const pm = c.get("processManager") as ProcessManager;
   const workspaceId = c.get("workspaceId");
   const id = c.req.param("id");
   const body = await c.req.json().catch(() => ({}));
@@ -118,17 +120,33 @@ agents.post("/directives/:id/dispatch", async (c) => {
   const directive = await agentService.getDirective(id);
   if (!directive) notFound(`Directive not found: ${id}`);
 
-  const workerId = body.workerId ?? body.worker_id;
-  if (workerId) {
-    const assigned = await agentService.assignDirective(id, workerId);
-    return c.json({ data: assigned });
+  // Find or specify agent
+  const agentId = body.agentId ?? body.agent_id;
+  let agent;
+  if (agentId) {
+    agent = await agentService.getAgent(agentId);
+    if (!agent) badRequest(`Agent not found: ${agentId}`);
+  } else {
+    agent = await agentService.getIdleAgent(workspaceId);
+    if (!agent) badRequest("No idle agents available");
   }
 
-  // Auto-assign to idle worker
-  const worker = await agentService.getIdleAgent(workspaceId);
-  if (!worker) badRequest("No idle agents available");
+  const assigned = await agentService.assignDirective(id, agent!.id);
 
-  const assigned = await agentService.assignDirective(id, worker.id);
+  // Auto-spawn process if autoRun is not false
+  if (body.autoRun !== false) {
+    try {
+      await pm.spawn(id, agent!.id, directive!.instruction, {
+        model: body.model,
+        cwd: body.cwd,
+      });
+      await agentService.startDirective(id);
+    } catch (err: any) {
+      // Spawn failed — mark as failed
+      await agentService.failDirective(id, `Failed to spawn: ${err.message}`);
+    }
+  }
+
   return c.json({ data: assigned });
 });
 
@@ -153,20 +171,60 @@ agents.put("/directives/:id/fail", async (c) => {
 // PUT /api/v1/directives/:id/cancel
 agents.put("/directives/:id/cancel", async (c) => {
   const agentService = c.get("agentService");
+  const pm = c.get("processManager") as ProcessManager;
   const id = c.req.param("id");
+
+  // Kill the process if running
+  pm.kill(id);
   const directive = await agentService.cancelDirective(id);
   return c.json({ data: directive });
 });
 
-// POST /api/v1/dispatch — auto-dispatch next pending directive
+// POST /api/v1/directives/:id/kill — kill running process
+agents.post("/directives/:id/kill", async (c) => {
+  const pm = c.get("processManager") as ProcessManager;
+  const id = c.req.param("id");
+  const killed = pm.kill(id);
+  return c.json({ data: { killed } });
+});
+
+// GET /api/v1/directives/:id/logs — get logs for directive
+agents.get("/directives/:id/logs", async (c) => {
+  const pm = c.get("processManager") as ProcessManager;
+  const id = c.req.param("id");
+  const logs = pm.getLogs(id);
+  const info = pm.getProcess(id);
+  return c.json({
+    data: {
+      directiveId: id,
+      status: info?.status ?? "unknown",
+      pid: info?.process.pid,
+      logLines: logs.length,
+      logs,
+    },
+  });
+});
+
+// POST /api/v1/dispatch — auto-dispatch next pending directive and spawn
 agents.post("/dispatch", async (c) => {
   const agentService = c.get("agentService");
+  const pm = c.get("processManager") as ProcessManager;
   const workspaceId = c.get("workspaceId");
+
   const result = await agentService.dispatch(workspaceId);
   if (!result) {
-    return c.json({ data: { dispatched: false, reason: "No pending directives or idle workers" } });
+    return c.json({ data: { dispatched: false, reason: "No pending directives or idle agents" } });
   }
-  return c.json({ data: { dispatched: true, directive: result.directive, worker: result.worker } });
+
+  // Auto-spawn
+  try {
+    await pm.spawn(result.directive.id, result.worker.id, result.directive.instruction);
+    await agentService.startDirective(result.directive.id);
+  } catch (err: any) {
+    await agentService.failDirective(result.directive.id, `Spawn failed: ${err.message}`);
+  }
+
+  return c.json({ data: { dispatched: true, directive: result.directive, agent: result.worker } });
 });
 
 export default agents;

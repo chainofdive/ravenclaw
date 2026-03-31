@@ -18,6 +18,7 @@ import {
   AgentService,
 } from "@ravenclaw/core";
 import { createApp } from "./app.js";
+import { ProcessManager } from "./process-manager.js";
 
 const PORT = parseInt(process.env.PORT || "3000", 10);
 const HOST = process.env.HOST || "0.0.0.0";
@@ -46,6 +47,25 @@ const sessionService = new SessionService(db);
 const humanInputService = new HumanInputService(db);
 const agentService = new AgentService(db);
 
+// Create process manager
+const processManager = new ProcessManager(agentService);
+
+// Wire up process completion → directive status update
+processManager.on("exit", async ({ directiveId, status, code }) => {
+  try {
+    const logs = processManager.getLogs(directiveId);
+    const result = logs.slice(-20).join(""); // Last 20 lines as result
+    if (status === "completed") {
+      await agentService.completeDirective(directiveId, result);
+    } else {
+      await agentService.failDirective(directiveId, `Exit code: ${code}\n${result}`);
+    }
+    console.log(`[PROCESS] Directive ${directiveId.slice(0, 8)} ${status} (code: ${code})`);
+  } catch (err) {
+    console.error(`[PROCESS] Failed to update directive status:`, err);
+  }
+});
+
 // Create the Hono application
 const app = createApp({
   db,
@@ -62,6 +82,7 @@ const app = createApp({
   sessionService,
   humanInputService,
   agentService,
+  processManager,
 });
 
 // Start the server

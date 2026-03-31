@@ -33,6 +33,8 @@ import locksListRoutes from "./routes/locksList.js";
 import sessionRoutes from "./routes/sessions.js";
 import humanInputRoutes from "./routes/humanInput.js";
 import agentRoutes from "./routes/agents.js";
+import { createSseRoutes } from "./routes/sse.js";
+import type { ProcessManager } from "./process-manager.js";
 
 /**
  * Application environment type for Hono context.
@@ -55,6 +57,7 @@ export type AppEnv = {
     sessionService: SessionService;
     humanInputService: HumanInputService;
     agentService: AgentService;
+    processManager: ProcessManager;
   };
 };
 
@@ -73,6 +76,7 @@ export interface AppServices {
   sessionService: SessionService;
   humanInputService: HumanInputService;
   agentService: AgentService;
+  processManager: ProcessManager;
 }
 
 /**
@@ -105,6 +109,7 @@ export function createApp(services: AppServices): Hono<AppEnv> {
     c.set("sessionService", services.sessionService);
     c.set("humanInputService", services.humanInputService);
     c.set("agentService", services.agentService);
+    c.set("processManager", services.processManager);
     await next();
   });
 
@@ -127,6 +132,7 @@ export function createApp(services: AppServices): Hono<AppEnv> {
   app.route("/api/v1/sessions", sessionRoutes);
   app.route("/api/v1/input-requests", humanInputRoutes);
   app.route("/api/v1/agents", agentRoutes);
+  app.route("/api/v1/sse", createSseRoutes(services.processManager));
 
   // Global onError fallback (catches errors that escape middleware)
   app.onError((err, c) => {
