@@ -339,17 +339,18 @@ export function formatWikiHistory(versions: WikiPageVersion[], format: OutputFor
  */
 export function formatContext(context: WorkContext): string {
   const lines: string[] = [
-    '# Work Context',
+    `# Work Context — ${context.workspace?.name ?? 'Workspace'}`,
     '',
   ];
 
-  // Epics
+  // Epics with issues
   lines.push('## Epics');
   lines.push('');
-  if (context.epics.length === 0) {
+  const epics = context.epics ?? [];
+  if (epics.length === 0) {
     lines.push('_No epics._');
   } else {
-    for (const epic of context.epics) {
+    for (const epic of epics) {
       lines.push(`### ${epic.key}: ${epic.title}`);
       lines.push(`- **Status:** ${epic.status}`);
       lines.push(`- **Priority:** ${epic.priority}`);
@@ -359,43 +360,54 @@ export function formatContext(context: WorkContext): string {
         lines.push(epic.description);
       }
       lines.push('');
-    }
-  }
 
-  // Active issues
-  lines.push('## Active Issues');
-  lines.push('');
-  if (context.activeIssues.length === 0) {
-    lines.push('_No active issues._');
-  } else {
-    for (const issue of context.activeIssues) {
-      const assigneePart = issue.assignee ? ` (@${issue.assignee})` : '';
-      lines.push(`- **${issue.key}** ${issue.title} [${issue.status}] ${issue.priority}${assigneePart}`);
+      const issues = epic.issues ?? [];
+      if (issues.length > 0) {
+        lines.push('**Issues:**');
+        for (const issue of issues) {
+          const assigneePart = issue.assignee ? ` (@${issue.assignee})` : '';
+          lines.push(`- **${issue.key}** ${issue.title} [${issue.status}] ${issue.priority}${assigneePart}`);
+        }
+        lines.push('');
+      }
     }
   }
-  lines.push('');
 
   // Recent activity
   lines.push('## Recent Activity');
   lines.push('');
-  if (context.recentActivity.length === 0) {
+  const activities = context.recentActivity ?? [];
+  if (activities.length === 0) {
     lines.push('_No recent activity._');
   } else {
-    for (const entry of context.recentActivity) {
+    for (const entry of activities) {
       const date = new Date(entry.createdAt).toLocaleString();
       lines.push(`- [${date}] ${entry.actor} ${entry.action} ${entry.entityType} ${entry.entityId}`);
     }
   }
   lines.push('');
 
-  // Ontology summary
-  if (context.ontologySummary) {
+  // Wiki pages
+  const pages = context.wikiPages ?? [];
+  if (pages.length > 0) {
+    lines.push('## Wiki Pages');
+    lines.push('');
+    for (const page of pages) {
+      lines.push(`- **${page.slug}**: ${page.title}`);
+    }
+    lines.push('');
+  }
+
+  // Ontology
+  if (context.ontology) {
+    const concepts = context.ontology.concepts ?? [];
+    const relations = context.ontology.relations ?? [];
     lines.push('## Ontology');
     lines.push('');
-    lines.push(`- **Concepts:** ${context.ontologySummary.concepts}`);
-    lines.push(`- **Relations:** ${context.ontologySummary.relations}`);
-    if (context.ontologySummary.topConcepts.length > 0) {
-      lines.push(`- **Top Concepts:** ${context.ontologySummary.topConcepts.join(', ')}`);
+    lines.push(`- **Concepts:** ${concepts.length}`);
+    lines.push(`- **Relations:** ${relations.length}`);
+    if (concepts.length > 0) {
+      lines.push(`- **Key Concepts:** ${concepts.map((c) => c.name).join(', ')}`);
     }
     lines.push('');
   }

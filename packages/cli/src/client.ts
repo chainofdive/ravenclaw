@@ -209,8 +209,8 @@ export class RavenclawClient {
     return this.request<T>('POST', path, body);
   }
 
-  private patch<T>(path: string, body?: unknown): Promise<T> {
-    return this.request<T>('PATCH', path, body);
+  private put<T>(path: string, body?: unknown): Promise<T> {
+    return this.request<T>('PUT', path, body);
   }
 
   private delete<T>(path: string): Promise<T> {
@@ -245,7 +245,7 @@ export class RavenclawClient {
   }
 
   async updateEpic(id: string, input: UpdateEpicInput): Promise<Epic> {
-    return this.patch<Epic>(`/epics/${encodeURIComponent(id)}`, input);
+    return this.put<Epic>(`/epics/${encodeURIComponent(id)}`, input);
   }
 
   async deleteEpic(id: string): Promise<void> {
@@ -273,7 +273,7 @@ export class RavenclawClient {
   }
 
   async updateIssue(id: string, input: UpdateIssueInput): Promise<Issue> {
-    return this.patch<Issue>(`/issues/${encodeURIComponent(id)}`, input);
+    return this.put<Issue>(`/issues/${encodeURIComponent(id)}`, input);
   }
 
   async deleteIssue(id: string): Promise<void> {
@@ -309,7 +309,7 @@ export class RavenclawClient {
   }
 
   async updateWikiPage(id: string, input: UpdateWikiPageInput): Promise<WikiPage> {
-    return this.patch<WikiPage>(`/wiki/${encodeURIComponent(id)}`, input);
+    return this.put<WikiPage>(`/wiki/${encodeURIComponent(id)}`, input);
   }
 
   async getWikiHistory(id: string): Promise<WikiPageVersion[]> {

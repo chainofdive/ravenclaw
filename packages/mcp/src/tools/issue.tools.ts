@@ -62,7 +62,7 @@ export function registerIssueTools(
     "create_issue",
     "Create a new issue under an epic",
     {
-      epic_id: z.string().describe("Parent epic ID (UUID)"),
+      epic_id: z.string().describe("Parent epic ID (UUID) or key (e.g. RC-E1)"),
       title: z.string().describe("Issue title"),
       description: z.string().optional().describe("Issue description"),
       priority: z

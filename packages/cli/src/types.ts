@@ -126,13 +126,17 @@ export interface Dependency {
 }
 
 export interface WorkContext {
-  epics: Epic[];
-  activeIssues: Issue[];
+  workspace: {
+    id: string;
+    name: string;
+    slug: string;
+  };
+  epics: Array<Epic & { issues: Issue[] }>;
   recentActivity: ActivityEntry[];
-  ontologySummary?: {
-    concepts: number;
-    relations: number;
-    topConcepts: string[];
+  wikiPages: WikiPage[];
+  ontology?: {
+    concepts: Array<{ id: string; name: string; conceptType: string }>;
+    relations: Array<{ sourceName: string; targetName: string; relationType: string }>;
   };
 }
 

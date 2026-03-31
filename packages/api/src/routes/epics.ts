@@ -1,8 +1,23 @@
 import { Hono } from "hono";
 import { CreateEpicInput, UpdateEpicInput } from "@ravenclaw/core";
-import type { EpicFilters } from "@ravenclaw/core";
+import type { EpicFilters, EpicService } from "@ravenclaw/core";
 import type { AppEnv } from "../app.js";
 import { notFound } from "../middleware/error.js";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Resolve an epic by UUID or key. Returns the epic or calls notFound(). */
+async function resolveEpic(
+  epicService: EpicService,
+  idOrKey: string,
+  workspaceId: string,
+) {
+  const epic = UUID_RE.test(idOrKey)
+    ? await epicService.getById(idOrKey)
+    : await epicService.getByKey(workspaceId, idOrKey);
+  if (!epic) notFound(`Epic not found: ${idOrKey}`);
+  return epic;
+}
 
 const epics = new Hono<AppEnv>();
 
@@ -36,15 +51,13 @@ epics.post("/", async (c) => {
   return c.json({ data: epic }, 201);
 });
 
-// GET /api/v1/epics/:id — get epic by ID
+// GET /api/v1/epics/:id — get epic by ID or key
 epics.get("/:id", async (c) => {
   const epicService = c.get("epicService");
+  const workspaceId = c.get("workspaceId");
   const id = c.req.param("id");
 
-  const epic = await epicService.getById(id);
-  if (!epic) {
-    notFound(`Epic not found: ${id}`);
-  }
+  const epic = await resolveEpic(epicService, id, workspaceId);
 
   return c.json({ data: epic });
 });
@@ -52,17 +65,14 @@ epics.get("/:id", async (c) => {
 // PUT /api/v1/epics/:id — update epic
 epics.put("/:id", async (c) => {
   const epicService = c.get("epicService");
+  const workspaceId = c.get("workspaceId");
   const id = c.req.param("id");
 
   const body = await c.req.json();
   const input = UpdateEpicInput.parse(body);
 
-  const existing = await epicService.getById(id);
-  if (!existing) {
-    notFound(`Epic not found: ${id}`);
-  }
-
-  const epic = await epicService.update(id, input);
+  const existing = await resolveEpic(epicService, id, workspaceId);
+  const epic = await epicService.update(existing.id, input);
 
   return c.json({ data: epic });
 });
@@ -70,14 +80,11 @@ epics.put("/:id", async (c) => {
 // DELETE /api/v1/epics/:id — delete epic
 epics.delete("/:id", async (c) => {
   const epicService = c.get("epicService");
+  const workspaceId = c.get("workspaceId");
   const id = c.req.param("id");
 
-  const existing = await epicService.getById(id);
-  if (!existing) {
-    notFound(`Epic not found: ${id}`);
-  }
-
-  await epicService.delete(id);
+  const existing = await resolveEpic(epicService, id, workspaceId);
+  await epicService.delete(existing.id);
 
   return c.json({ data: { deleted: true } });
 });
@@ -85,14 +92,11 @@ epics.delete("/:id", async (c) => {
 // GET /api/v1/epics/:id/tree — get epic with full issue tree
 epics.get("/:id/tree", async (c) => {
   const epicService = c.get("epicService");
+  const workspaceId = c.get("workspaceId");
   const id = c.req.param("id");
 
-  const epic = await epicService.getById(id);
-  if (!epic) {
-    notFound(`Epic not found: ${id}`);
-  }
-
-  const tree = await epicService.getTree(id);
+  const existing = await resolveEpic(epicService, id, workspaceId);
+  const tree = await epicService.getTree(existing.id);
 
   return c.json({ data: tree });
 });
@@ -100,14 +104,11 @@ epics.get("/:id/tree", async (c) => {
 // GET /api/v1/epics/:id/progress — get calculated progress
 epics.get("/:id/progress", async (c) => {
   const epicService = c.get("epicService");
+  const workspaceId = c.get("workspaceId");
   const id = c.req.param("id");
 
-  const epic = await epicService.getById(id);
-  if (!epic) {
-    notFound(`Epic not found: ${id}`);
-  }
-
-  const progress = await epicService.calculateProgress(id);
+  const existing = await resolveEpic(epicService, id, workspaceId);
+  const progress = await epicService.calculateProgress(existing.id);
 
   return c.json({ data: progress });
 });
