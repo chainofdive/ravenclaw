@@ -218,7 +218,7 @@ export interface HumanInputRequestInfo {
   answeredAt: string | null;
 }
 
-export interface AgentWorkerInfo {
+export interface AgentInfo {
   id: string;
   name: string;
   status: string;
@@ -321,27 +321,27 @@ export const api = {
       method: 'PUT',
     }),
 
-  // Workers & Directives
-  listWorkers: () => apiFetch<AgentWorkerInfo[]>('/workers'),
-  createWorker: (input: { name: string; agentType?: string }) =>
-    apiFetch<AgentWorkerInfo>('/workers', { method: 'POST', body: JSON.stringify(input) }),
-  deleteWorker: (id: string) =>
-    apiFetch<{ deleted: boolean }>(`/workers/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  // Agents & Directives
+  listAgents: () => apiFetch<AgentInfo[]>('/agents'),
+  createAgent: (input: { name: string; agentType?: string }) =>
+    apiFetch<AgentInfo>('/agents', { method: 'POST', body: JSON.stringify(input) }),
+  deleteAgent: (id: string) =>
+    apiFetch<{ deleted: boolean }>(`/agents/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   listDirectives: (projectId?: string) => {
     const params = new URLSearchParams();
     if (projectId) params.set('project_id', projectId);
     const qs = params.toString();
-    return apiFetch<WorkDirectiveInfo[]>(`/workers/directives/list${qs ? `?${qs}` : ''}`);
+    return apiFetch<WorkDirectiveInfo[]>(`/agents/directives/list${qs ? `?${qs}` : ''}`);
   },
   createDirective: (input: { instruction: string; projectId?: string; epicId?: string }) =>
-    apiFetch<WorkDirectiveInfo>('/workers/directives', { method: 'POST', body: JSON.stringify(input) }),
+    apiFetch<WorkDirectiveInfo>('/agents/directives', { method: 'POST', body: JSON.stringify(input) }),
   dispatchDirective: (id: string, workerId?: string) =>
-    apiFetch<WorkDirectiveInfo>(`/workers/directives/${encodeURIComponent(id)}/dispatch`, {
+    apiFetch<WorkDirectiveInfo>(`/agents/directives/${encodeURIComponent(id)}/dispatch`, {
       method: 'POST',
       body: JSON.stringify(workerId ? { workerId } : {}),
     }),
   cancelDirective: (id: string) =>
-    apiFetch<WorkDirectiveInfo>(`/workers/directives/${encodeURIComponent(id)}/cancel`, { method: 'PUT' }),
+    apiFetch<WorkDirectiveInfo>(`/agents/directives/${encodeURIComponent(id)}/cancel`, { method: 'PUT' }),
   autoDispatch: () =>
-    apiFetch<{ dispatched: boolean; directive?: WorkDirectiveInfo; worker?: AgentWorkerInfo }>('/workers/dispatch', { method: 'POST' }),
+    apiFetch<{ dispatched: boolean; directive?: WorkDirectiveInfo; worker?: AgentInfo }>('/agents/dispatch', { method: 'POST' }),
 };

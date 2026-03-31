@@ -1,10 +1,10 @@
 import { useEffect, useState, useCallback } from 'react';
-import { api, type AgentWorkerInfo, type WorkDirectiveInfo, type Project } from '../lib/api';
+import { api, type AgentInfo, type WorkDirectiveInfo, type Project } from '../lib/api';
 import { Card } from '../components/Card';
 import { PendingInputs } from '../components/PendingInputs';
 
-export function Workers() {
-  const [workers, setWorkers] = useState<AgentWorkerInfo[]>([]);
+export function Agents() {
+  const [workers, setWorkers] = useState<AgentInfo[]>([]);
   const [directives, setDirectives] = useState<WorkDirectiveInfo[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [error, setError] = useState('');
@@ -15,7 +15,7 @@ export function Workers() {
   const [newWorkerName, setNewWorkerName] = useState('');
 
   const load = useCallback(() => {
-    api.listWorkers().then(setWorkers).catch((e) => setError(e.message));
+    api.listAgents().then(setWorkers).catch((e) => setError(e.message));
     api.listDirectives().then(setDirectives).catch(() => setDirectives([]));
     api.listProjects().then(setProjects).catch(() => setProjects([]));
   }, []);
@@ -29,7 +29,7 @@ export function Workers() {
   const handleCreateWorker = async () => {
     if (!newWorkerName.trim()) return;
     try {
-      await api.createWorker({ name: newWorkerName.trim() });
+      await api.createAgent({ name: newWorkerName.trim() });
       setNewWorkerName('');
       load();
     } catch (e: any) {
@@ -39,7 +39,7 @@ export function Workers() {
 
   const handleDeleteWorker = async (id: string) => {
     try {
-      await api.deleteWorker(id);
+      await api.deleteAgent(id);
       load();
     } catch (e: any) {
       setError(e.message);
@@ -114,7 +114,7 @@ export function Workers() {
 
   return (
     <div className="p-6 space-y-6">
-      <h2 className="text-xl font-semibold text-slate-950">Workers & Directives</h2>
+      <h2 className="text-xl font-semibold text-slate-950">Agents & Directives</h2>
 
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-sm text-red-700">{error}</div>
@@ -125,7 +125,7 @@ export function Workers() {
 
       <div className="grid grid-cols-2 gap-6">
         {/* Workers Panel */}
-        <Card title="Agent Workers">
+        <Card title="Agents">
           <div className="space-y-3">
             {workers.map((w) => (
               <div key={w.id} className="flex items-center gap-3 py-2 border-b border-gray-100 last:border-0">
@@ -144,7 +144,7 @@ export function Workers() {
               </div>
             ))}
             {workers.length === 0 && (
-              <p className="text-sm text-slate-400">No workers registered</p>
+              <p className="text-sm text-slate-400">No agents registered</p>
             )}
 
             <div className="flex gap-2 pt-2">
@@ -153,7 +153,7 @@ export function Workers() {
                 value={newWorkerName}
                 onChange={(e) => setNewWorkerName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleCreateWorker()}
-                placeholder="Worker name..."
+                placeholder="Agent name..."
                 className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-300"
               />
               <button

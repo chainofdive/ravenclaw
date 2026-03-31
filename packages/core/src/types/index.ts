@@ -436,13 +436,13 @@ export type AnswerHumanInputInput = z.infer<typeof AnswerHumanInputInput>;
 export type WorkerStatus = "idle" | "running" | "paused" | "stopped" | "error";
 export type DirectiveStatus = "pending" | "assigned" | "running" | "completed" | "failed" | "cancelled";
 
-export const CreateWorkerInput = z.object({
+export const CreateAgentInput = z.object({
   workspaceId: z.string().uuid(),
   name: z.string().min(1).max(255),
   agentType: z.string().max(100).optional(),
   config: z.record(z.unknown()).optional(),
 });
-export type CreateWorkerInput = z.infer<typeof CreateWorkerInput>;
+export type CreateAgentInput = z.infer<typeof CreateAgentInput>;
 
 export const CreateDirectiveInput = z.object({
   workspaceId: z.string().uuid(),

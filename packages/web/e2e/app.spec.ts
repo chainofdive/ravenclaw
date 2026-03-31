@@ -65,27 +65,28 @@ test.describe('Issues page', () => {
   });
 });
 
-test.describe('Workers page', () => {
-  test('shows workers and directives panels', async ({ page }) => {
-    await page.goto('/workers');
-    await expect(page.locator('h2')).toContainText('Workers & Directives');
-    await expect(page.getByRole('heading', { name: 'Agent Workers' })).toBeVisible();
+test.describe('Agents page', () => {
+  test('shows agents and directives panels', async ({ page }) => {
+    await page.goto('/agents');
+    await expect(page.locator('h2')).toContainText('Agents & Directives');
+    await expect(page.getByRole('heading', { name: 'Agents', exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'New Directive' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Directives', exact: true })).toBeVisible();
   });
 
-  test('creates a worker', async ({ page }) => {
-    await page.goto('/workers');
-    await page.getByPlaceholder('Worker name...').fill('e2e-test-worker');
+  test('creates an agent', async ({ page }) => {
+    await page.goto('/agents');
+    await page.getByPlaceholder('Agent name...').fill('e2e-agent-unique');
     await page.getByRole('button', { name: 'Add' }).click();
-    await expect(page.getByText('e2e-test-worker')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('e2e-agent-unique').first()).toBeVisible({ timeout: 5000 });
   });
 
   test('creates a directive', async ({ page }) => {
-    await page.goto('/workers');
-    await page.getByPlaceholder('Describe the work').fill('E2E unique directive 12345');
+    await page.goto('/agents');
+    const uniqueText = `E2E directive ${Date.now()}`;
+    await page.getByPlaceholder('Describe the work').fill(uniqueText);
     await page.getByRole('button', { name: 'Create Directive' }).click();
-    await expect(page.locator('p').filter({ hasText: 'E2E unique directive 12345' })).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('p').filter({ hasText: uniqueText }).first()).toBeVisible({ timeout: 5000 });
   });
 });
 
@@ -133,9 +134,9 @@ test.describe('Navigation', () => {
     await page.getByRole('link', { name: 'Issues' }).click();
     await expect(page.locator('h2').first()).toContainText('Issues', { timeout: 5000 });
 
-    // Navigate to Workers
-    await page.getByRole('link', { name: 'Workers' }).click();
-    await expect(page.locator('h2').first()).toContainText('Workers', { timeout: 5000 });
+    // Navigate to Agents
+    await page.getByRole('link', { name: 'Agents' }).click();
+    await expect(page.locator('h2').first()).toContainText('Agents', { timeout: 5000 });
 
     // Navigate back to Dashboard
     await page.getByRole('link', { name: 'Dashboard' }).click();

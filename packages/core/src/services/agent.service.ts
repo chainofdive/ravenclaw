@@ -4,16 +4,16 @@ import { agentWorkers, workDirectives } from "../db/schema.js";
 import type {
   AgentWorker,
   WorkDirective,
-  CreateWorkerInput,
+  CreateAgentInput,
   CreateDirectiveInput,
 } from "../types/index.js";
 
-export class WorkerService {
+export class AgentService {
   constructor(private db: Database) {}
 
-  // ── Workers ──────────────────────────────────────────────────────────
+  // ── Agents ──────────────────────────────────────────────────────────
 
-  async createWorker(input: CreateWorkerInput): Promise<AgentWorker> {
+  async createAgent(input: CreateAgentInput): Promise<AgentWorker> {
     const [worker] = await this.db
       .insert(agentWorkers)
       .values({
@@ -26,7 +26,7 @@ export class WorkerService {
     return worker;
   }
 
-  async updateWorkerStatus(
+  async updateAgentStatus(
     id: string,
     status: string,
     extra?: { processId?: number; currentDirectiveId?: string | null },
@@ -54,7 +54,7 @@ export class WorkerService {
       .where(eq(agentWorkers.id, id));
   }
 
-  async getWorker(id: string): Promise<AgentWorker | undefined> {
+  async getAgent(id: string): Promise<AgentWorker | undefined> {
     const [worker] = await this.db
       .select()
       .from(agentWorkers)
@@ -63,7 +63,7 @@ export class WorkerService {
     return worker;
   }
 
-  async listWorkers(workspaceId: string): Promise<AgentWorker[]> {
+  async listAgents(workspaceId: string): Promise<AgentWorker[]> {
     return this.db
       .select()
       .from(agentWorkers)
@@ -71,7 +71,7 @@ export class WorkerService {
       .orderBy(desc(agentWorkers.createdAt));
   }
 
-  async getIdleWorker(workspaceId: string): Promise<AgentWorker | undefined> {
+  async getIdleAgent(workspaceId: string): Promise<AgentWorker | undefined> {
     const [worker] = await this.db
       .select()
       .from(agentWorkers)
@@ -85,7 +85,7 @@ export class WorkerService {
     return worker;
   }
 
-  async deleteWorker(id: string): Promise<void> {
+  async deleteAgent(id: string): Promise<void> {
     await this.db.delete(agentWorkers).where(eq(agentWorkers.id, id));
   }
 
@@ -121,7 +121,7 @@ export class WorkerService {
       .returning();
 
     // Update worker status
-    await this.updateWorkerStatus(workerId, "running", {
+    await this.updateAgentStatus(workerId, "running", {
       currentDirectiveId: directiveId,
     });
 
@@ -153,7 +153,7 @@ export class WorkerService {
 
     // Free up the worker
     if (directive.assignedWorkerId) {
-      await this.updateWorkerStatus(directive.assignedWorkerId, "idle", {
+      await this.updateAgentStatus(directive.assignedWorkerId, "idle", {
         currentDirectiveId: null,
       });
     }
@@ -176,7 +176,7 @@ export class WorkerService {
       .returning();
 
     if (directive.assignedWorkerId) {
-      await this.updateWorkerStatus(directive.assignedWorkerId, "idle", {
+      await this.updateAgentStatus(directive.assignedWorkerId, "idle", {
         currentDirectiveId: null,
       });
     }
@@ -192,7 +192,7 @@ export class WorkerService {
       .returning();
 
     if (directive.assignedWorkerId) {
-      await this.updateWorkerStatus(directive.assignedWorkerId, "idle", {
+      await this.updateAgentStatus(directive.assignedWorkerId, "idle", {
         currentDirectiveId: null,
       });
     }
@@ -251,11 +251,11 @@ export class WorkerService {
     const directive = await this.getNextPending(workspaceId);
     if (!directive) return null;
 
-    const worker = await this.getIdleWorker(workspaceId);
+    const worker = await this.getIdleAgent(workspaceId);
     if (!worker) return null;
 
     const assigned = await this.assignDirective(directive.id, worker.id);
-    const updatedWorker = (await this.getWorker(worker.id))!;
+    const updatedWorker = (await this.getAgent(worker.id))!;
 
     return { directive: assigned, worker: updatedWorker };
   }

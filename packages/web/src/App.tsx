@@ -6,7 +6,7 @@ import { Projects } from './pages/Projects';
 import { Epics } from './pages/Epics';
 import { Issues } from './pages/Issues';
 import { Wiki } from './pages/Wiki';
-import { Workers } from './pages/Workers';
+import { Agents } from './pages/Agents';
 import { Ontology } from './pages/Ontology';
 import { Context } from './pages/Context';
 
@@ -23,7 +23,7 @@ export default function App() {
               <Route path="/projects" element={<Projects />} />
               <Route path="/epics" element={<Epics />} />
               <Route path="/issues" element={<Issues />} />
-              <Route path="/workers" element={<Workers />} />
+              <Route path="/agents" element={<Agents />} />
               <Route path="/wiki" element={<Wiki />} />
               <Route path="/ontology" element={<Ontology />} />
               <Route path="/context" element={<Context />} />
