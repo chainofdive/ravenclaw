@@ -122,7 +122,7 @@ export function CommandPanel({ projectId, projectKey }: Props) {
   const idleAgents = agents.filter((a) => a.status === 'idle');
 
   return (
-    <div className="flex flex-col h-[calc(100vh-20rem)] mt-4">
+    <div className="flex flex-col h-full px-3 py-2">
       {/* Directive history — scrollable */}
       <div className="flex-1 overflow-y-auto space-y-2 pb-2">
         {directives.length === 0 && (

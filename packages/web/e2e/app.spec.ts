@@ -12,11 +12,12 @@ test.describe('Dashboard', () => {
 });
 
 test.describe('Projects page', () => {
-  test('shows project list', async ({ page }) => {
+  test('shows project list and auto-selects', async ({ page }) => {
     await page.goto('/projects');
-    await expect(page.locator('h2')).toContainText('Projects');
-    await expect(page.getByText('RC-P1')).toBeVisible();
-    await expect(page.getByText('SURVIVE')).toBeVisible();
+    // Left sidebar should show project keys
+    await expect(page.getByText('RC-P1')).toBeVisible({ timeout: 5000 });
+    // Auto-selected project header should be visible
+    await expect(page.locator('h2').first()).toBeVisible();
   });
 
   test('expands project to show epics', async ({ page }) => {
@@ -32,30 +33,25 @@ test.describe('Projects page', () => {
     await expect(page.locator('.react-flow')).toBeVisible({ timeout: 10000 });
   });
 
-  test('switches to command view', async ({ page }) => {
+  test('shows command panel alongside content', async ({ page }) => {
     await page.goto('/projects');
-    await page.getByText('SURVIVE').click();
-    await page.getByRole('button', { name: 'Command' }).click();
+    // First project should auto-select, command panel should be visible
     await expect(page.getByPlaceholder('Instruct agent', { exact: false })).toBeVisible({ timeout: 5000 });
   });
 
   test('switches to history view', async ({ page }) => {
     await page.goto('/projects');
-    await page.getByText('SURVIVE').click();
-    await page.getByRole('button', { name: 'History' }).click();
+    await page.getByRole('button', { name: 'history' }).click();
     await expect(page.getByRole('heading', { name: 'Context Snapshots' })).toBeVisible({ timeout: 5000 });
   });
 
-  test('sends a command from project', async ({ page }) => {
+  test('sends a command while viewing tree', async ({ page }) => {
     await page.goto('/projects');
-    await page.getByText('SURVIVE').click();
-    await page.getByRole('button', { name: 'Command' }).click();
 
-    const uniqueCmd = `E2E command ${Date.now()}`;
+    const uniqueCmd = `E2E cmd ${Date.now()}`;
     await page.getByPlaceholder('Instruct agent', { exact: false }).fill(uniqueCmd);
     await page.getByRole('button', { name: 'Send' }).click();
 
-    // Should appear in directive history
     await expect(page.getByText(uniqueCmd).first()).toBeVisible({ timeout: 5000 });
   });
 });
@@ -112,7 +108,8 @@ test.describe('Navigation', () => {
     await page.goto('/');
 
     await page.getByRole('link', { name: 'Projects' }).click();
-    await expect(page.locator('h2').first()).toContainText('Projects', { timeout: 5000 });
+    // Projects page shows project name in h2 (auto-selected)
+    await expect(page.getByText('RC-P', { exact: false }).first()).toBeVisible({ timeout: 5000 });
 
     await page.getByRole('link', { name: 'Issues' }).click();
     await expect(page.locator('h2').first()).toContainText('Issues', { timeout: 5000 });

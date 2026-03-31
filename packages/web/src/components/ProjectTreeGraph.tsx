@@ -291,7 +291,7 @@ export function ProjectTreeGraph({ data }: { data: ProjectGraphData }) {
   }
 
   return (
-    <div className="w-full h-[calc(100vh-16rem)] rounded-xl border border-gray-100 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+    <div className="w-full h-full rounded-xl border border-gray-100 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
       <ReactFlow
         nodes={nodes}
         edges={edges}
