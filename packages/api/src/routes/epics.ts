@@ -29,12 +29,9 @@ epics.post("/", async (c) => {
   const workspaceId = c.get("workspaceId");
 
   const body = await c.req.json();
-  const input = CreateEpicInput.parse(body);
+  const input = CreateEpicInput.parse({ ...body, workspaceId });
 
-  const epic = await epicService.create({
-    ...input,
-    workspaceId,
-  });
+  const epic = await epicService.create(input);
 
   return c.json({ data: epic }, 201);
 });

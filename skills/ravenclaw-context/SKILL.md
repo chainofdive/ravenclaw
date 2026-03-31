@@ -5,11 +5,13 @@ description: Load work context from Ravenclaw and prepare for task execution. Us
 
 This skill helps you quickly load and apply work context from the Ravenclaw system.
 
+When installed as a plugin, the MCP server and API credentials are configured automatically via `userConfig`. For standalone use, ensure the `rc` CLI is configured (`rc init`).
+
 ## Steps
 
 ### 1. Load Work Context
 
-First, get the full work context. If the Ravenclaw MCP server is available, use the `get_work_context` tool. Otherwise, run the CLI:
+First, get the full work context. If the Ravenclaw MCP server is available (auto-configured when installed as a plugin), use the `get_work_context` tool. Otherwise, run the CLI:
 
 ```bash
 rc context

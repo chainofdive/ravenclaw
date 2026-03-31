@@ -1,0 +1,27 @@
+{
+  "name": "ravenclaw",
+  "description": "Personal work context management for AI-powered development. Track epics, issues, wiki pages, and knowledge ontology across AI agent sessions.",
+  "version": "0.1.0",
+  "author": {
+    "name": "chainofdive",
+    "url": "https://github.com/chainofdive"
+  },
+  "homepage": "https://github.com/chainofdive/ravenclaw",
+  "repository": "https://github.com/chainofdive/ravenclaw",
+  "license": "Apache-2.0",
+  "keywords": ["ravenclaw", "context", "mcp", "epics", "issues", "wiki", "ontology"],
+  "skills": "./skills/",
+  "agents": "./agents/",
+  "mcpServers": "./.mcp.json",
+  "hooks": "./hooks/hooks.json",
+  "userConfig": {
+    "api_url": {
+      "description": "Ravenclaw API server URL (e.g., http://localhost:3000)",
+      "sensitive": false
+    },
+    "api_key": {
+      "description": "Ravenclaw API key for authentication",
+      "sensitive": true
+    }
+  }
+}

@@ -33,12 +33,9 @@ issues.post("/", async (c) => {
   const workspaceId = c.get("workspaceId");
 
   const body = await c.req.json();
-  const input = CreateIssueInput.parse(body);
+  const input = CreateIssueInput.parse({ ...body, workspaceId });
 
-  const issue = await issueService.create({
-    ...input,
-    workspaceId,
-  });
+  const issue = await issueService.create(input);
 
   return c.json({ data: issue }, 201);
 });

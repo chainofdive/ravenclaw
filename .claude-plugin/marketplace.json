@@ -1,0 +1,15 @@
+{
+  "name": "ravenclaw-marketplace",
+  "owner": {
+    "name": "chainofdive",
+    "url": "https://github.com/chainofdive"
+  },
+  "plugins": [
+    {
+      "name": "ravenclaw",
+      "source": "./",
+      "description": "Personal work context management — epics, issues, wiki, ontology with MCP + CLI",
+      "version": "0.1.0"
+    }
+  ]
+}

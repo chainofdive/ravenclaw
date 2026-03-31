@@ -23,12 +23,9 @@ wiki.post("/", async (c) => {
   const workspaceId = c.get("workspaceId");
 
   const body = await c.req.json();
-  const input = CreateWikiPageInput.parse(body);
+  const input = CreateWikiPageInput.parse({ ...body, workspaceId });
 
-  const page = await wikiService.create({
-    ...input,
-    workspaceId,
-  });
+  const page = await wikiService.create(input);
 
   return c.json({ data: page }, 201);
 });

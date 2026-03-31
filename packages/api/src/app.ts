@@ -10,6 +10,7 @@ import {
   CommentService,
   EpicLockService,
 } from "@ravenclaw/core";
+import { ZodError } from "zod";
 import { errorHandler } from "./middleware/error.js";
 import { requestLogger } from "./middleware/logging.js";
 import { authMiddleware } from "./middleware/auth.js";
@@ -102,6 +103,36 @@ export function createApp(services: AppServices): Hono<AppEnv> {
   app.route("/api/v1/comments", commentRoutes);
   app.route("/api/v1/epics", lockRoutes);
   app.route("/api/v1/locks", locksListRoutes);
+
+  // Global onError fallback (catches errors that escape middleware)
+  app.onError((err, c) => {
+    if (err instanceof ZodError) {
+      const details = err.errors.map((e: { path: (string | number)[]; message: string; code: string }) => ({
+        path: e.path.join("."),
+        message: e.message,
+        code: e.code,
+      }));
+      console.error("[ERROR] Validation error:", JSON.stringify(details));
+      return c.json(
+        { error: { code: "VALIDATION_ERROR", message: "Request validation failed", details } },
+        422,
+      );
+    }
+
+    if ((err as any).name === "ApiHttpError") {
+      const httpErr = err as any;
+      return c.json(
+        { error: { code: httpErr.code, message: httpErr.message, ...(httpErr.details ? { details: httpErr.details } : {}) } },
+        httpErr.statusCode,
+      );
+    }
+
+    console.error("[ERROR] Unhandled:", err.message, err.stack);
+    return c.json(
+      { error: { code: "INTERNAL_ERROR", message: "An unexpected error occurred" } },
+      500,
+    );
+  });
 
   // 404 catch-all
   app.notFound((c) => {

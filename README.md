@@ -47,6 +47,31 @@ Ravenclaw is a self-hosted system that gives AI coding agents persistent memory 
 | `@ravenclaw/cli` | Terminal interface (`rc` command) using Commander.js |
 | `@ravenclaw/mcp` | MCP server for AI agent integration via stdio transport |
 
+## Plugin Installation (Recommended)
+
+Install Ravenclaw as a Claude Code plugin for the easiest setup:
+
+### 1. Add the marketplace
+```
+/plugin marketplace add chainofdive/ravenclaw
+```
+
+### 2. Install the plugin
+```
+/plugin install ravenclaw@ravenclaw-marketplace
+```
+
+You'll be prompted for:
+- **API URL**: Your Ravenclaw API server (e.g., `http://localhost:3000`)
+- **API Key**: Your Ravenclaw API key
+
+### 3. Start using
+```
+/ravenclaw-context
+```
+
+This installs the MCP server (19+ tools), skill, and custom agent automatically.
+
 ## Quick Start
 
 ### Prerequisites

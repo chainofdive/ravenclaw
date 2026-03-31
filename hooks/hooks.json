@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'Ravenclaw plugin loaded. Use /ravenclaw-context to load your work context.'",
+            "statusMessage": "Initializing Ravenclaw",
+            "once": true
+          }
+        ]
+      }
+    ]
+  }
+}
