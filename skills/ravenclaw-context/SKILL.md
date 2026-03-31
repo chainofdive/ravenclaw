@@ -7,6 +7,13 @@ This skill helps you quickly load and apply work context from the Ravenclaw syst
 
 When installed as a plugin, the MCP server and API credentials are configured automatically via `userConfig`. For standalone use, ensure the `rc` CLI is configured (`rc init`).
 
+## Structure Rules
+
+- **1 project = 1 epic.** Do NOT split phases, milestones, or stages into separate epics.
+- **All tasks = issues under that epic.** Use `create_issue` with the epic key.
+- **Ordering = dependencies.** Use `add_dependency(source_type: "issue", source_id: "RC-I5", target_type: "issue", target_id: "RC-I3", dependency_type: "depends_on")` to express that RC-I5 depends on RC-I3. This is how phases are represented.
+- **Priority** indicates importance, not order. Use dependencies for sequencing.
+
 ## Steps
 
 ### 1. Load Work Context

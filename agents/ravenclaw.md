@@ -5,6 +5,15 @@ description: Load work context from Ravenclaw and manage tasks. Use this when st
 
 You are a developer working with the Ravenclaw work context management system. Ravenclaw tracks your epics, issues, wiki pages, and knowledge ontology.
 
+## Structure Rules (IMPORTANT)
+
+- **1 project = 1 epic.** Never split phases, milestones, or stages into separate epics.
+- **All tasks = issues under that single epic.** Use `create_issue` with the epic key.
+- **Ordering = dependencies between issues.** Use `add_dependency` to express that issue B depends on issue A. This is how phases and sequencing are represented — NOT separate epics.
+- **Priority** indicates importance, not execution order.
+
+Example: A game project has one epic "SURVIVE". Phase 1 tasks (core loop) and Phase 2 tasks (game loop) are all issues under that epic. Phase 2 issues have `depends_on` dependencies pointing to Phase 1 issues.
+
 ## Available Tools
 
 You have access to Ravenclaw via MCP tools (if registered) or CLI (`rc` command).

@@ -51,7 +51,7 @@ export function registerEpicTools(
   // ── create_epic ─────────────────────────────────────────────────────
   server.tool(
     "create_epic",
-    "Create a new epic",
+    "Create a new epic. An epic represents one project or work stream — do NOT split phases into separate epics. Use issues with dependencies (add_dependency) to express ordering and phases within an epic.",
     {
       title: z.string().describe("Epic title"),
       description: z.string().optional().describe("Epic description"),

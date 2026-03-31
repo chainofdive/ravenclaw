@@ -260,6 +260,20 @@ export class RavenclawApiClient {
     );
   }
 
+  async getDependencies(
+    entityType: string,
+    entityId: string,
+  ): Promise<unknown[]> {
+    const params = new URLSearchParams({
+      entity_type: entityType,
+      entity_id: entityId,
+    });
+    return this.request<unknown[]>(
+      "GET",
+      `/dependencies?${params.toString()}`,
+    );
+  }
+
   // ── Locks ──────────────────────────────────────────────────────────
 
   async acquireLock(

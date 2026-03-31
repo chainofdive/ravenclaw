@@ -7,6 +7,7 @@ import { registerContextTools } from "./tools/context.tools.js";
 import { registerOntologyTools } from "./tools/ontology.tools.js";
 import { registerSearchTools } from "./tools/search.tools.js";
 import { registerCommentTools } from "./tools/comment.tools.js";
+import { registerDependencyTools } from "./tools/dependency.tools.js";
 import { registerLockTools } from "./tools/lock.tools.js";
 import { registerContextResources } from "./resources/context.resources.js";
 import { registerEpicResources } from "./resources/epic.resources.js";
@@ -50,6 +51,7 @@ export function createServer(config: ServerConfig): McpServer {
   registerOntologyTools(server, client);
   registerSearchTools(server, client);
   registerCommentTools(server, client);
+  registerDependencyTools(server, client);
   registerLockTools(server, client);
 
   // Register all resources
