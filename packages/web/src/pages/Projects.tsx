@@ -8,6 +8,12 @@ import { LockBadge } from '../components/LockBadge';
 import { ProjectTreeGraph, type ProjectGraphData } from '../components/ProjectTreeGraph';
 import { PendingInputs } from '../components/PendingInputs';
 import { CommandPanel } from '../components/CommandPanel';
+import { ResizeHandle } from '../components/ResizeHandle';
+
+const LEFT_MIN = 160;
+const LEFT_DEFAULT = 224;
+const CMD_MIN = 320;
+const CMD_DEFAULT = 480;
 
 type ContentTab = 'list' | 'graph' | 'history';
 
@@ -18,6 +24,8 @@ export function Projects() {
   const [contentTab, setContentTab] = useState<ContentTab>('list');
   const [expandedEpic, setExpandedEpic] = useState<string | null>(null);
   const [commandOpen, setCommandOpen] = useState(false);
+  const [leftWidth, setLeftWidth] = useState(LEFT_DEFAULT);
+  const [cmdWidth, setCmdWidth] = useState(CMD_DEFAULT);
   const [error, setError] = useState('');
 
   // Graph
@@ -81,7 +89,14 @@ export function Projects() {
   return (
     <div className="flex h-full">
       {/* ── Left: Project List ──────────────────────────────── */}
-      <div className="w-56 border-r border-gray-200 bg-white shrink-0 overflow-y-auto">
+      <div className="relative border-r border-gray-200 bg-white shrink-0 overflow-y-auto" style={{ width: leftWidth }}>
+        <ResizeHandle
+          side="left"
+          onResize={(delta) => {
+            const maxW = Math.floor(window.innerWidth / 3);
+            setLeftWidth((w) => Math.max(LEFT_MIN, Math.min(maxW, w + delta)));
+          }}
+        />
         <div className="p-3 border-b border-gray-100">
           <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Projects</h3>
         </div>
@@ -329,9 +344,19 @@ export function Projects() {
             />
           )}
           {/* Slide-in panel */}
-          <div className={`fixed top-0 right-0 h-full w-96 bg-white border-l border-gray-200 shadow-2xl z-40 flex flex-col transition-transform duration-300 ease-in-out ${
-            commandOpen ? 'translate-x-0' : 'translate-x-full'
-          }`}>
+          <div
+            className={`fixed top-0 right-0 h-full bg-white border-l border-gray-200 shadow-2xl z-40 flex flex-col transition-transform duration-300 ease-in-out ${
+              commandOpen ? 'translate-x-0' : 'translate-x-full'
+            }`}
+            style={{ width: cmdWidth }}
+          >
+            <ResizeHandle
+              side="right"
+              onResize={(delta) => {
+                const maxW = Math.floor(window.innerWidth / 3);
+                setCmdWidth((w) => Math.max(CMD_MIN, Math.min(maxW, w + delta)));
+              }}
+            />
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 shrink-0">
               <div>
                 <h3 className="text-sm font-semibold text-slate-700">Command</h3>
