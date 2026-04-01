@@ -92,7 +92,9 @@ export class ConversationManager extends EventEmitter {
 
       conv.currentProcess = child;
       let fullResponse = "";
+      let emittedLength = 0;
       let sessionId: string | undefined;
+      let doneEmitted = false;
 
       // Parse stream-json output for claude-code
       if (conv.agentType === "claude-code") {
@@ -107,35 +109,48 @@ export class ConversationManager extends EventEmitter {
             try {
               const event = JSON.parse(line);
 
-              // Capture session ID
+              // Capture session ID from any event
               if (event.session_id && !sessionId) {
                 sessionId = event.session_id;
                 conv.claudeSessionId = sessionId;
               }
 
-              // Stream assistant text
-              if (event.type === "assistant" && event.message?.content) {
-                for (const block of event.message.content) {
-                  if (block.type === "text") {
-                    fullResponse += block.text;
-                    this.emit("stream", {
-                      projectId,
-                      text: block.text,
-                      done: false,
-                    });
-                  }
-                }
-              }
-
-              // Result event
+              // Result event — contains the final complete text
               if (event.type === "result") {
                 if (event.session_id) {
                   conv.claudeSessionId = event.session_id;
+                }
+                // Use result text as the definitive response
+                const resultText = event.result ?? "";
+                if (resultText && resultText.length > emittedLength) {
+                  const delta = resultText.substring(emittedLength);
+                  fullResponse = resultText;
+                  emittedLength = resultText.length;
+                  this.emit("stream", { projectId, text: delta, done: false });
+                }
+                continue;
+              }
+
+              // Assistant message — extract text and emit only the delta
+              if (event.type === "assistant" && event.message?.content) {
+                let currentText = "";
+                for (const block of event.message.content) {
+                  if (block.type === "text") {
+                    currentText += block.text;
+                  }
+                }
+                // Only emit the new portion (delta)
+                if (currentText.length > emittedLength) {
+                  const delta = currentText.substring(emittedLength);
+                  fullResponse = currentText;
+                  emittedLength = currentText.length;
+                  this.emit("stream", { projectId, text: delta, done: false });
                 }
               }
             } catch {
               // Not JSON — treat as raw text
               fullResponse += line + "\n";
+              emittedLength = fullResponse.length;
               this.emit("stream", {
                 projectId,
                 text: line + "\n",
@@ -163,7 +178,10 @@ export class ConversationManager extends EventEmitter {
       });
 
       await new Promise<void>((resolve) => {
-        child.on("close", () => {
+        const finish = () => {
+          if (doneEmitted) return;
+          doneEmitted = true;
+
           conv.isProcessing = false;
           conv.currentProcess = null;
 
@@ -182,17 +200,20 @@ export class ConversationManager extends EventEmitter {
             sessionId: conv.claudeSessionId,
           });
           resolve();
-        });
+        };
+
+        child.on("close", finish);
 
         child.on("error", (err) => {
-          conv.isProcessing = false;
-          conv.currentProcess = null;
-          this.emit("stream", {
-            projectId,
-            text: `[error] ${err.message}`,
-            done: true,
-          });
-          resolve();
+          if (!doneEmitted) {
+            fullResponse += `\n[error] ${err.message}`;
+            this.emit("stream", {
+              projectId,
+              text: `[error] ${err.message}`,
+              done: false,
+            });
+          }
+          finish();
         });
       });
     } catch (err: any) {
