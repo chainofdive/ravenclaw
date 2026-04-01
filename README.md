@@ -68,7 +68,7 @@ Workspace
        └─ Directives → dispatched to project directory
 ```
 
-Additional entities: Wiki pages, Ontology (concepts + relations), Comments, Dependencies, Work sessions, Context snapshots, Human input requests, Work directives.
+Additional entities: Wiki pages, Ontology (concepts + relations), Comments, Dependencies, Work sessions, Context snapshots, Human input requests, Conversations (persistent chat with DB storage), Work directives.
 
 ## Quick Start
 
@@ -95,20 +95,30 @@ pnpm --filter @ravenclaw/web dev
 
 ## Web Dashboard
 
-The dashboard provides a project-centric workspace:
+The dashboard provides a project-centric workspace — like a web version of tmux for AI agents.
 
 **Projects page (3-panel layout):**
-- Left: Project list (resizable)
+- Left: Project list (resizable, shows project key + status)
 - Center: Content area with List / Graph / History tabs
-- Right: Command overlay panel (resizable, slide-in)
+- Right: Command panel (slide-in overlay, resizable, fullscreen mode)
 
-**Features:**
-- Graph view with real-time animation (in_progress nodes glow)
-- Command panel: chat-style directive interface to instruct agents
+**Interactive Chat (Command Panel):**
+- Real-time streaming conversation with AI agents (SSE)
+- Conversation continuity via `claude --resume` (session preserved across messages)
+- Persistent chat history stored in DB (survives server restart)
+- Session selector — switch between past conversations or start new ones
+- File path auto-detection — clickable links to preview md/images/PDF
+- Support for Claude Code, Gemini CLI, Codex agents
+- Fullscreen mode for focused work
+- Stop button to cancel running responses
+
+**Other Features:**
+- Graph view with animated nodes (in_progress issues glow blue)
 - History tab: context snapshots and work session timeline
-- Human input requests: pending questions from agents with answer UI
-- Agents page: register agents (Claude Code / Gemini CLI / Codex), view directive queue
+- Human input requests: agents ask questions, users answer via web UI
+- Agents page: register/manage agents with type selection
 - Collapsible sidebar, resizable panels
+- File preview modal: markdown rendering, image display, PDF viewer
 
 ## Agent Workflow
 
@@ -194,7 +204,9 @@ All endpoints under `/api/v1`, authenticated via `Authorization: Bearer <api-key
 | Input Requests | `POST /input-requests`, `GET /input-requests/waiting`, `PUT /input-requests/:id/answer` |
 | Agents | `GET/POST /agents`, `DELETE /agents/:id` |
 | Directives | `POST /agents/directives`, `POST /agents/directives/:id/dispatch`, `GET /agents/directives/:id/logs` |
-| SSE | `GET /sse/logs/:directiveId` (real-time log streaming) |
+| Conversations | `GET /conversations/:projectId/list`, `POST .../new`, `POST .../message`, `GET .../stream` (SSE), `GET .../history` |
+| Files | `GET /files?path=...&project_id=...` (serve project files), `GET /files/info` |
+| SSE | `GET /sse/logs/:directiveId`, `GET /conversations/:id/stream?token=...` |
 | Locks | `POST/DELETE/GET /epics/:id/lock`, `GET /locks` |
 | Ontology | `GET /ontology/concepts`, `GET /ontology/graph`, `POST /ontology/rebuild` |
 | Search | `GET /search?q=` |
