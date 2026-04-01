@@ -24,6 +24,7 @@ export function Projects() {
   const [contentTab, setContentTab] = useState<ContentTab>('list');
   const [expandedEpic, setExpandedEpic] = useState<string | null>(null);
   const [commandOpen, setCommandOpen] = useState(false);
+  const [commandFullscreen, setCommandFullscreen] = useState(false);
   const [leftWidth, setLeftWidth] = useState(LEFT_DEFAULT);
   const [cmdWidth, setCmdWidth] = useState(CMD_DEFAULT);
   const [error, setError] = useState('');
@@ -336,44 +337,74 @@ export function Projects() {
         )}
       </div>
 
-      {/* ── Right: Command Overlay Panel ──────────────────────── */}
+      {/* ── Command Overlay / Fullscreen ─────────────────────── */}
       {selectedId && selectedProject && (
         <>
-          {/* Backdrop */}
-          {commandOpen && (
+          {/* Backdrop (side panel only, not fullscreen) */}
+          {commandOpen && !commandFullscreen && (
             <div
               className="fixed inset-0 bg-black/10 z-30"
               onClick={() => setCommandOpen(false)}
             />
           )}
-          {/* Slide-in panel */}
+
+          {/* Panel — side or fullscreen */}
           <div
-            className={`fixed top-0 right-0 h-full bg-white border-l border-gray-200 shadow-2xl z-40 flex flex-col transition-transform duration-300 ease-in-out ${
-              commandOpen ? 'translate-x-0' : 'translate-x-full'
+            className={`fixed z-40 bg-white flex flex-col transition-all duration-300 ease-in-out ${
+              commandFullscreen
+                ? 'inset-0'
+                : `top-0 right-0 h-full border-l border-gray-200 shadow-2xl ${
+                    commandOpen ? 'translate-x-0' : 'translate-x-full'
+                  }`
             }`}
-            style={{ width: cmdWidth }}
+            style={commandFullscreen ? undefined : { width: cmdWidth }}
           >
-            <ResizeHandle
-              side="right"
-              onResize={(delta) => {
-                const maxW = Math.floor(window.innerWidth / 3);
-                setCmdWidth((w) => Math.max(CMD_MIN, Math.min(maxW, w + delta)));
-              }}
-            />
+            {/* Resize handle (side mode only) */}
+            {!commandFullscreen && (
+              <ResizeHandle
+                side="right"
+                onResize={(delta) => {
+                  const maxW = Math.floor(window.innerWidth / 3);
+                  setCmdWidth((w) => Math.max(CMD_MIN, Math.min(maxW, w + delta)));
+                }}
+              />
+            )}
+
+            {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 shrink-0">
               <div>
                 <h3 className="text-sm font-semibold text-slate-700">Command</h3>
                 <p className="text-xs text-slate-400">{selectedProject.key} {selectedProject.name}</p>
               </div>
-              <button
-                onClick={() => setCommandOpen(false)}
-                className="p-1 text-slate-400 hover:text-slate-600 hover:bg-gray-100 rounded transition-colors"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+              <div className="flex items-center gap-1">
+                {/* Fullscreen toggle */}
+                <button
+                  onClick={() => setCommandFullscreen(!commandFullscreen)}
+                  className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-gray-100 rounded transition-colors"
+                  title={commandFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+                >
+                  {commandFullscreen ? (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" />
+                    </svg>
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
+                    </svg>
+                  )}
+                </button>
+                {/* Close */}
+                <button
+                  onClick={() => { setCommandOpen(false); setCommandFullscreen(false); }}
+                  className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-gray-100 rounded transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
             </div>
+
             <div className="flex-1 overflow-hidden">
               <CommandPanel projectId={selectedId} projectKey={selectedProject.key} />
             </div>

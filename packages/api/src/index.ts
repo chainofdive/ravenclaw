@@ -50,7 +50,7 @@ const agentService = new AgentService(db);
 // Create process manager
 const processManager = new ProcessManager(agentService);
 
-// Wire up process completion → directive status update
+// Wire up process completion → directive status update + auto context save
 processManager.on("exit", async ({ directiveId, status, code }) => {
   try {
     const logs = processManager.getLogs(directiveId);
@@ -61,6 +61,20 @@ processManager.on("exit", async ({ directiveId, status, code }) => {
       await agentService.failDirective(directiveId, `Exit code: ${code}\n${result}`);
     }
     console.log(`[PROCESS] Directive ${directiveId.slice(0, 8)} ${status} (code: ${code})`);
+
+    // Auto-save context snapshot from the directive's project
+    const directive = await agentService.getDirective(directiveId);
+    if (directive?.projectId) {
+      const logSummary = logs.slice(-50).join("").substring(0, 2000);
+      await sessionService.saveSnapshot({
+        workspaceId: directive.workspaceId,
+        projectId: directive.projectId,
+        agentName: "auto",
+        snapshotType: "compact",
+        content: `## Auto-saved (${status})\n\n**Directive:** ${directive.instruction.substring(0, 200)}\n**Exit code:** ${code}\n\n### Output (last lines)\n\`\`\`\n${logSummary}\n\`\`\``,
+      });
+      console.log(`[PROCESS] Auto-saved context snapshot for project ${directive.projectId.slice(0, 8)}`);
+    }
   } catch (err) {
     console.error(`[PROCESS] Failed to update directive status:`, err);
   }
