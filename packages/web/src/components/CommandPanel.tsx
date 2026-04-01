@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { api, type AgentInfo } from '../lib/api';
+import { api, type AgentInfo, getApiKey } from '../lib/api';
 import { FilePreview, parseFileLinks } from './FilePreview';
 
 interface Props {
@@ -45,7 +45,7 @@ export function CommandPanel({ projectId, projectKey }: Props) {
 
   // SSE connection for streaming
   useEffect(() => {
-    const es = new EventSource(`/api/v1/conversations/${encodeURIComponent(projectId)}/stream`);
+    const es = new EventSource(`/api/v1/conversations/${encodeURIComponent(projectId)}/stream?token=${encodeURIComponent(getApiKey())}`);
     eventSourceRef.current = es;
 
     es.addEventListener('stream', (e) => {

@@ -12,17 +12,23 @@ export const authMiddleware = createMiddleware<AppEnv>(async (c, next) => {
     return next();
   }
 
+  // Support auth via header or query param (for SSE/EventSource which can't set headers)
   const authorization = c.req.header("Authorization");
-  if (!authorization) {
-    unauthorized("Missing Authorization header");
-  }
+  const queryToken = c.req.query("token");
 
-  const match = authorization!.match(/^Bearer\s+(.+)$/);
-  if (!match) {
-    unauthorized("Invalid Authorization header format. Expected: Bearer <api-key>");
-  }
+  let apiKey: string | undefined;
 
-  const apiKey = match![1];
+  if (authorization) {
+    const match = authorization.match(/^Bearer\s+(.+)$/);
+    if (!match) {
+      unauthorized("Invalid Authorization header format. Expected: Bearer <api-key>");
+    }
+    apiKey = match![1];
+  } else if (queryToken) {
+    apiKey = queryToken;
+  } else {
+    unauthorized("Missing Authorization header or token query parameter");
+  }
   const keyHash = createHash("sha256").update(apiKey).digest("hex");
 
   // Look up the API key in the database using parameterized query
