@@ -283,7 +283,7 @@ export function CommandPanel({ projectId, projectKey }: Props) {
 
       {/* File preview modal */}
       {previewFile && (
-        <FilePreview path={previewFile} onClose={() => setPreviewFile(null)} />
+        <FilePreview path={previewFile} projectId={projectId} onClose={() => setPreviewFile(null)} />
       )}
     </div>
   );

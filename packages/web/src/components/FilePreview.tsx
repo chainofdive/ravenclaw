@@ -5,6 +5,7 @@ import { getApiKey } from '../lib/api';
 
 interface Props {
   path: string;
+  projectId?: string;
   onClose: () => void;
 }
 
@@ -19,7 +20,7 @@ function getFileName(path: string): string {
   return path.split('/').pop() || path;
 }
 
-export function FilePreview({ path, onClose }: Props) {
+export function FilePreview({ path, projectId, onClose }: Props) {
   const [content, setContent] = useState<string | null>(null);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [error, setError] = useState('');
@@ -32,7 +33,9 @@ export function FilePreview({ path, onClose }: Props) {
   const isMarkdown = ext === '.md';
 
   useEffect(() => {
-    const url = `${API_BASE}/files?path=${encodeURIComponent(path)}`;
+    const params = new URLSearchParams({ path });
+    if (projectId) params.set('project_id', projectId);
+    const url = `${API_BASE}/files?${params.toString()}`;
     const headers: Record<string, string> = {
       Authorization: `Bearer ${getApiKey()}`,
     };
@@ -147,8 +150,8 @@ export function FilePreview({ path, onClose }: Props) {
  * Parse text for file paths and return segments with file links.
  */
 export function parseFileLinks(text: string): Array<{ type: 'text' | 'file'; value: string }> {
-  // Match absolute paths with known extensions
-  const fileRegex = /(\/[\w./-]+\.(md|txt|png|jpg|jpeg|gif|svg|webp|pdf|json|html|css|js|ts|tsx|yaml|yml|csv))\b/gi;
+  // Match file paths — absolute (/path/to/file.md) or relative (./path/to/file.md, path/to/file.md)
+  const fileRegex = /((?:\.{0,2}\/)?[\w./-]+\.(md|txt|png|jpg|jpeg|gif|svg|webp|pdf|json|html|css|js|ts|tsx|yaml|yml|csv))\b/gi;
 
   const segments: Array<{ type: 'text' | 'file'; value: string }> = [];
   let lastIndex = 0;

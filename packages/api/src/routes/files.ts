@@ -31,7 +31,8 @@ const MIME_TYPES: Record<string, string> = {
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
-// GET /api/v1/files?path=/absolute/path&project_id=RC-P1
+// GET /api/v1/files?path=...&project_id=RC-P1
+// path can be absolute or relative to the project directory
 files.get("/", async (c) => {
   const projectService = c.get("projectService");
   const workspaceId = c.get("workspaceId");
@@ -41,26 +42,51 @@ files.get("/", async (c) => {
 
   if (!filePath) badRequest("Query parameter 'path' is required");
 
-  const absolutePath = resolve(filePath!);
-
-  // Security: verify file is within a project directory
+  // Resolve the path — try absolute first, then relative to project dir
+  let absolutePath = resolve(filePath!);
   let allowed = false;
+
+  // If project_id is given, try resolving relative to project directory
   if (projectId) {
     const project = /^[0-9a-f-]{36}$/i.test(projectId)
       ? await projectService.getById(projectId)
       : await projectService.getByKey(workspaceId, projectId);
-    if (project?.directory && absolutePath.startsWith(resolve(project.directory))) {
-      allowed = true;
+
+    if (project?.directory) {
+      const projectDir = resolve(project.directory);
+
+      // If the path doesn't start with the project dir, treat as relative
+      if (!absolutePath.startsWith(projectDir)) {
+        // Strip leading slash for relative resolution
+        const relativePart = filePath!.startsWith("/") ? filePath!.substring(1) : filePath!;
+        absolutePath = resolve(projectDir, relativePart);
+      }
+
+      if (absolutePath.startsWith(projectDir)) {
+        allowed = true;
+      }
     }
   }
 
-  // If no project_id or not matched, check all projects
+  // If still not allowed, check all projects (for absolute paths)
   if (!allowed) {
     const projects = await projectService.list(workspaceId);
     for (const p of projects) {
-      if (p.directory && absolutePath.startsWith(resolve(p.directory))) {
-        allowed = true;
-        break;
+      if (p.directory) {
+        const dir = resolve(p.directory);
+        // Try as-is
+        if (absolutePath.startsWith(dir)) {
+          allowed = true;
+          break;
+        }
+        // Try relative resolution
+        const relativePart = filePath!.startsWith("/") ? filePath!.substring(1) : filePath!;
+        const candidate = resolve(dir, relativePart);
+        if (candidate.startsWith(dir)) {
+          absolutePath = candidate;
+          allowed = true;
+          break;
+        }
       }
     }
   }
@@ -97,17 +123,39 @@ files.get("/info", async (c) => {
   const workspaceId = c.get("workspaceId");
 
   const filePath = c.req.query("path");
+  const projectId = c.req.query("project_id");
   if (!filePath) badRequest("Query parameter 'path' is required");
 
-  const absolutePath = resolve(filePath!);
+  let absolutePath = resolve(filePath!);
 
-  // Verify access
+  // Resolve relative to project or any project
   const projects = await projectService.list(workspaceId);
   let allowed = false;
-  for (const p of projects) {
-    if (p.directory && absolutePath.startsWith(resolve(p.directory))) {
-      allowed = true;
-      break;
+
+  // Try project_id first
+  if (projectId) {
+    const project = /^[0-9a-f-]{36}$/i.test(projectId)
+      ? await projectService.getById(projectId)
+      : await projectService.getByKey(workspaceId, projectId);
+    if (project?.directory) {
+      const dir = resolve(project.directory);
+      if (!absolutePath.startsWith(dir)) {
+        const rel = filePath!.startsWith("/") ? filePath!.substring(1) : filePath!;
+        absolutePath = resolve(dir, rel);
+      }
+      if (absolutePath.startsWith(dir)) allowed = true;
+    }
+  }
+
+  if (!allowed) {
+    for (const p of projects) {
+      if (p.directory) {
+        const dir = resolve(p.directory);
+        if (absolutePath.startsWith(dir)) { allowed = true; break; }
+        const rel = filePath!.startsWith("/") ? filePath!.substring(1) : filePath!;
+        const candidate = resolve(dir, rel);
+        if (candidate.startsWith(dir)) { absolutePath = candidate; allowed = true; break; }
+      }
     }
   }
   if (!allowed) forbidden("File is not within any project directory");

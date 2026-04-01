@@ -29,7 +29,7 @@ test.describe('Projects page', () => {
   test('switches to graph view', async ({ page }) => {
     await page.goto('/projects');
     await page.getByText('SURVIVE').click();
-    await page.getByRole('button', { name: 'Graph' }).click();
+    await page.getByRole('button', { name: 'graph', exact: true }).click();
     await expect(page.locator('.react-flow')).toBeVisible({ timeout: 10000 });
   });
 
