@@ -29,6 +29,7 @@ export function CommandPanel({ projectId, projectKey }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [selectedAgent, setSelectedAgent] = useState('');
+  const [permissionMode, setPermissionMode] = useState('auto');
   const [isProcessing, setIsProcessing] = useState(false);
   const [streamingText, setStreamingText] = useState('');
   const [activity, setActivity] = useState('');
@@ -116,7 +117,7 @@ export function CommandPanel({ projectId, projectKey }: Props) {
     setMessages((prev) => [...prev, { role: 'user', content: message, createdAt: new Date().toISOString() }]);
 
     try {
-      const result = await api.sendConversationMessage(projectId, message, activeConvId ?? undefined, selectedAgent || undefined);
+      const result = await api.sendConversationMessage(projectId, message, activeConvId ?? undefined, selectedAgent || undefined, permissionMode);
       if (result.conversationId && !activeConvId) {
         setActiveConvId(result.conversationId);
       }
@@ -289,6 +290,14 @@ export function CommandPanel({ projectId, projectKey }: Props) {
             {agents.filter((a) => a.status === 'idle').map((a) => (
               <option key={a.id} value={a.id}>{a.name} ({a.agentType})</option>
             ))}
+          </select>
+          <select value={permissionMode} onChange={(e) => setPermissionMode(e.target.value)}
+            className="border border-gray-200 rounded-lg px-2 py-1 bg-white text-xs focus:outline-none focus:ring-2 focus:ring-teal-300"
+            title="Permission mode">
+            <option value="auto">Auto-approve</option>
+            <option value="bypassPermissions">Bypass all</option>
+            <option value="acceptEdits">Accept edits</option>
+            <option value="default">Ask (interactive)</option>
           </select>
           <span className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-green-400' : 'bg-red-400'}`} />
           <span className="text-slate-400">{connected ? 'connected' : 'disconnected'}</span>

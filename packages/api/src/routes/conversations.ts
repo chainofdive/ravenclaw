@@ -61,6 +61,7 @@ export function createConversationRoutes(conversationManager: ConversationManage
     // Get or create conversation
     const conversation = await conversationManager.getOrCreateConversation(
       workspaceId, projectId, agentType, directory ?? process.cwd(), body.conversationId,
+      body.permissionMode ?? "auto",
     );
 
     if (conversationManager.isProcessing(conversation.id)) {

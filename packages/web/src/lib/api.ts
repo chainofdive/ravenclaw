@@ -360,10 +360,10 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ agentId, title }),
     }),
-  sendConversationMessage: (projectId: string, message: string, conversationId?: string, agentId?: string) =>
+  sendConversationMessage: (projectId: string, message: string, conversationId?: string, agentId?: string, permissionMode?: string) =>
     apiFetch<{ sent: boolean; conversationId: string }>(`/conversations/${encodeURIComponent(projectId)}/message`, {
       method: 'POST',
-      body: JSON.stringify({ message, conversationId, agentId }),
+      body: JSON.stringify({ message, conversationId, agentId, permissionMode }),
     }),
   getConversationHistory: (projectId: string, conversationId?: string) =>
     apiFetch<{ conversationId: string; messages: Array<{ role: string; content: string; createdAt: string }>; isProcessing: boolean }>(`/conversations/${encodeURIComponent(projectId)}/history${conversationId ? `?conversation_id=${conversationId}` : ''}`),

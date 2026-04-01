@@ -17,10 +17,13 @@ export interface ConversationMessage {
   timestamp: Date;
 }
 
+export type PermissionMode = "default" | "auto" | "bypassPermissions" | "acceptEdits";
+
 export interface ActiveConversation {
   id: string; // DB conversation id
   projectId: string;
   agentType: string;
+  permissionMode: PermissionMode;
   claudeSessionId?: string;
   currentProcess: ChildProcess | null;
   isProcessing: boolean;
@@ -59,6 +62,7 @@ export class ConversationManager extends EventEmitter {
     agentType: string,
     cwd: string,
     conversationId?: string,
+    permissionMode: PermissionMode = "auto",
   ): Promise<ActiveConversation> {
     // If specific conversation requested, load it
     if (conversationId) {
@@ -77,7 +81,8 @@ export class ConversationManager extends EventEmitter {
           projectId,
           agentType: conv.agentType,
           claudeSessionId: conv.externalSessionId ?? undefined,
-          currentProcess: null,
+          permissionMode,
+        currentProcess: null,
           isProcessing: false,
           cwd,
         };
@@ -110,6 +115,7 @@ export class ConversationManager extends EventEmitter {
         projectId,
         agentType: existing.agentType,
         claudeSessionId: existing.externalSessionId ?? undefined,
+        permissionMode,
         currentProcess: null,
         isProcessing: false,
         cwd,
@@ -134,7 +140,8 @@ export class ConversationManager extends EventEmitter {
       id: newConv.id,
       projectId,
       agentType,
-      currentProcess: null,
+      permissionMode,
+        currentProcess: null,
       isProcessing: false,
       cwd,
     };
@@ -151,6 +158,7 @@ export class ConversationManager extends EventEmitter {
     agentType: string,
     cwd: string,
     title?: string,
+    permissionMode: PermissionMode = "auto",
   ): Promise<ActiveConversation> {
     // Deactivate previous
     await this.db
@@ -184,7 +192,8 @@ export class ConversationManager extends EventEmitter {
       id: newConv.id,
       projectId,
       agentType,
-      currentProcess: null,
+      permissionMode,
+        currentProcess: null,
       isProcessing: false,
       cwd,
     };
@@ -381,6 +390,9 @@ export class ConversationManager extends EventEmitter {
         const args = ["-p", message, "--output-format", "stream-json", "--verbose"];
         if (conv.claudeSessionId) {
           args.push("--resume", conv.claudeSessionId);
+        }
+        if (conv.permissionMode && conv.permissionMode !== "default") {
+          args.push("--permission-mode", conv.permissionMode);
         }
         return { command: "claude", args };
       }

@@ -189,7 +189,7 @@ export class ProcessManager extends EventEmitter {
   private buildCommand(
     agentType: string,
     instruction: string,
-    config?: { model?: string; allowedTools?: string[] },
+    config?: { model?: string; allowedTools?: string[]; permissionMode?: string },
   ): { command: string; args: string[] } {
     switch (agentType) {
       case "gemini-cli": {
@@ -219,6 +219,11 @@ export class ProcessManager extends EventEmitter {
         if (config?.model) args.push("--model", config.model);
         if (config?.allowedTools && config.allowedTools.length > 0) {
           args.push("--allowedTools", config.allowedTools.join(","));
+        }
+        // Default to auto permission for headless execution
+        const permMode = config?.permissionMode ?? "auto";
+        if (permMode !== "default") {
+          args.push("--permission-mode", permMode);
         }
         return { command: "claude", args };
       }
