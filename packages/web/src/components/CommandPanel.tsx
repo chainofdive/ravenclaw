@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { api, type AgentInfo, type WorkDirectiveInfo } from '../lib/api';
+import { FilePreview, parseFileLinks } from './FilePreview';
 
 interface Props {
   projectId: string;
@@ -14,6 +15,7 @@ export function CommandPanel({ projectId, projectKey }: Props) {
   const [expandedLogs, setExpandedLogs] = useState<string | null>(null);
   const [logs, setLogs] = useState<string[]>([]);
   const [sending, setSending] = useState(false);
+  const [previewFile, setPreviewFile] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
 
@@ -95,6 +97,34 @@ export function CommandPanel({ projectId, projectKey }: Props) {
     } catch { /* ignore */ }
   };
 
+  const FileLinkedText = ({ text, className }: { text: string; className?: string }) => {
+    const segments = parseFileLinks(text);
+    const hasFiles = segments.some((s) => s.type === 'file');
+    if (!hasFiles) return <span className={className}>{text}</span>;
+
+    return (
+      <span className={className}>
+        {segments.map((seg, i) =>
+          seg.type === 'file' ? (
+            <button
+              key={i}
+              onClick={() => setPreviewFile(seg.value)}
+              className="inline-flex items-center gap-1 px-1 py-0.5 bg-teal-50 text-teal-700 rounded hover:bg-teal-100 transition-colors font-mono text-xs"
+              title={seg.value}
+            >
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+              {seg.value.split('/').pop()}
+            </button>
+          ) : (
+            <span key={i}>{seg.value}</span>
+          ),
+        )}
+      </span>
+    );
+  };
+
   const statusIcon = (status: string) => {
     switch (status) {
       case 'completed': return '✓';
@@ -167,17 +197,17 @@ export function CommandPanel({ projectId, projectKey }: Props) {
                         </button>
                       </div>
                     </div>
-                    <p className="text-sm text-slate-800 whitespace-pre-wrap">{d.instruction}</p>
+                    <p className="text-sm text-slate-800 whitespace-pre-wrap"><FileLinkedText text={d.instruction} /></p>
                     {d.result && d.status === 'completed' && (
                       <div className="mt-2 pt-2 border-t border-gray-100">
                         <p className="text-xs text-emerald-600 font-medium mb-1">Result</p>
-                        <p className="text-xs text-slate-600 whitespace-pre-wrap max-h-32 overflow-y-auto">{d.result}</p>
+                        <p className="text-xs text-slate-600 whitespace-pre-wrap max-h-32 overflow-y-auto"><FileLinkedText text={d.result} /></p>
                       </div>
                     )}
                     {d.result && d.status === 'failed' && (
                       <div className="mt-2 pt-2 border-t border-red-100">
                         <p className="text-xs text-red-600 font-medium mb-1">Error</p>
-                        <p className="text-xs text-red-500 whitespace-pre-wrap max-h-20 overflow-y-auto">{d.result}</p>
+                        <p className="text-xs text-red-500 whitespace-pre-wrap max-h-20 overflow-y-auto"><FileLinkedText text={d.result} /></p>
                       </div>
                     )}
                   </div>
@@ -194,7 +224,7 @@ export function CommandPanel({ projectId, projectKey }: Props) {
                               line.startsWith('[stderr]') ? 'text-red-400' :
                               line.startsWith('[error]') ? 'text-red-300' :
                               'text-green-300'
-                            }`}>{line}</div>
+                            }`}><FileLinkedText text={line} /></div>
                           ))}
                           <div ref={logEndRef} />
                         </>
@@ -250,6 +280,11 @@ export function CommandPanel({ projectId, projectKey }: Props) {
           </button>
         </div>
       </div>
+
+      {/* File preview modal */}
+      {previewFile && (
+        <FilePreview path={previewFile} onClose={() => setPreviewFile(null)} />
+      )}
     </div>
   );
 }

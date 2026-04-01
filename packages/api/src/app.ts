@@ -33,6 +33,7 @@ import locksListRoutes from "./routes/locksList.js";
 import sessionRoutes from "./routes/sessions.js";
 import humanInputRoutes from "./routes/humanInput.js";
 import agentRoutes from "./routes/agents.js";
+import fileRoutes from "./routes/files.js";
 import { createSseRoutes } from "./routes/sse.js";
 import type { ProcessManager } from "./process-manager.js";
 
@@ -132,6 +133,7 @@ export function createApp(services: AppServices): Hono<AppEnv> {
   app.route("/api/v1/sessions", sessionRoutes);
   app.route("/api/v1/input-requests", humanInputRoutes);
   app.route("/api/v1/agents", agentRoutes);
+  app.route("/api/v1/files", fileRoutes);
   app.route("/api/v1/sse", createSseRoutes(services.processManager));
 
   // Global onError fallback (catches errors that escape middleware)
