@@ -273,14 +273,24 @@ export class ConversationManager extends EventEmitter {
 
               if (event.type === "assistant" && event.message?.content) {
                 let currentText = "";
+                let hasToolUse = false;
+                let toolName = "";
                 for (const block of event.message.content) {
                   if (block.type === "text") currentText += block.text;
+                  if (block.type === "tool_use") {
+                    hasToolUse = true;
+                    toolName = block.name ?? "tool";
+                  }
                 }
                 if (currentText.length > emittedLength) {
                   const delta = currentText.substring(emittedLength);
                   fullResponse = currentText;
                   emittedLength = currentText.length;
                   this.emit("stream", { conversationId, projectId: conv.projectId, text: delta, done: false });
+                }
+                // Emit tool activity status
+                if (hasToolUse) {
+                  this.emit("status", { conversationId, projectId: conv.projectId, activity: `Running: ${toolName}` });
                 }
               }
             } catch {

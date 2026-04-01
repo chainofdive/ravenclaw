@@ -78,7 +78,7 @@ export function createConversationRoutes(conversationManager: ConversationManage
     const { id: projectId } = await resolveProjectId(c, c.req.param("projectId"), workspaceId);
 
     return streamSSE(c, async (stream) => {
-      const handler = (event: { projectId: string; conversationId: string; text: string; done: boolean }) => {
+      const streamHandler = (event: { projectId: string; conversationId: string; text: string; done: boolean }) => {
         if (event.projectId === projectId) {
           stream.writeSSE({
             data: JSON.stringify({ text: event.text, done: event.done, conversationId: event.conversationId }),
@@ -87,11 +87,22 @@ export function createConversationRoutes(conversationManager: ConversationManage
         }
       };
 
-      conversationManager.on("stream", handler);
+      const statusHandler = (event: { projectId: string; activity: string }) => {
+        if (event.projectId === projectId) {
+          stream.writeSSE({
+            data: JSON.stringify({ activity: event.activity }),
+            event: "status",
+          }).catch(() => {});
+        }
+      };
+
+      conversationManager.on("stream", streamHandler);
+      conversationManager.on("status", statusHandler);
       const keepAlive = setInterval(() => { stream.writeSSE({ data: "", event: "ping" }).catch(() => {}); }, 15000);
 
       stream.onAbort(() => {
-        conversationManager.off("stream", handler);
+        conversationManager.off("stream", streamHandler);
+        conversationManager.off("status", statusHandler);
         clearInterval(keepAlive);
       });
 

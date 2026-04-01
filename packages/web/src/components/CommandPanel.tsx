@@ -31,6 +31,7 @@ export function CommandPanel({ projectId, projectKey }: Props) {
   const [selectedAgent, setSelectedAgent] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [streamingText, setStreamingText] = useState('');
+  const [activity, setActivity] = useState('');
   const [previewFile, setPreviewFile] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
   const [showConvPicker, setShowConvPicker] = useState(false);
@@ -77,11 +78,19 @@ export function CommandPanel({ projectId, projectKey }: Props) {
             return '';
           });
           setIsProcessing(false);
-          // Refresh conversation list
+          setActivity('');
           api.listConversations(projectId).then(setConvList).catch(() => {});
         } else if (data.text) {
           setStreamingText((prev) => prev + data.text);
+          setActivity(''); // Clear activity when text arrives
         }
+      } catch { /* ignore */ }
+    });
+
+    es.addEventListener('status', (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data.activity) setActivity(data.activity);
       } catch { /* ignore */ }
     });
 
@@ -103,6 +112,7 @@ export function CommandPanel({ projectId, projectKey }: Props) {
     setInput('');
     setIsProcessing(true);
     setStreamingText('');
+    setActivity('');
     setMessages((prev) => [...prev, { role: 'user', content: message, createdAt: new Date().toISOString() }]);
 
     try {
@@ -246,7 +256,22 @@ export function CommandPanel({ projectId, projectKey }: Props) {
                   <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: '150ms' }} />
                   <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: '300ms' }} />
                 </div>
-                Thinking...
+                {activity || 'Thinking...'}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Activity indicator while streaming (tool use during response) */}
+        {isProcessing && streamingText && activity && (
+          <div className="flex justify-start">
+            <div className="rounded-lg px-2.5 py-1.5 bg-blue-50 border border-blue-100">
+              <div className="flex items-center gap-1.5 text-xs text-blue-600">
+                <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                {activity}
               </div>
             </div>
           </div>
