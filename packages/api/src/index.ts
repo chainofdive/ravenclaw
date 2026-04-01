@@ -82,7 +82,7 @@ processManager.on("exit", async ({ directiveId, status, code }) => {
 });
 
 // Create conversation manager
-const conversationManager = new ConversationManager(agentService);
+const conversationManager = new ConversationManager(agentService, db);
 
 // Create the Hono application
 const app = createApp({

@@ -2,13 +2,14 @@
  * Conversation Manager — manages persistent chat sessions per project.
  *
  * Uses `claude -p "..." --resume <session-id>` for conversation continuity.
- * Each project has one active conversation. Messages are sent sequentially,
- * and the claude session ID is tracked for resumption.
+ * Persists conversations and messages to DB for durability.
  */
 
 import { spawn, type ChildProcess } from "node:child_process";
 import { EventEmitter } from "node:events";
+import { eq, and, desc } from "drizzle-orm";
 import type { AgentService } from "@ravenclaw/core";
+import { conversations, conversationMessages } from "@ravenclaw/core";
 
 export interface ConversationMessage {
   role: "user" | "assistant";
@@ -17,69 +18,216 @@ export interface ConversationMessage {
 }
 
 export interface ActiveConversation {
+  id: string; // DB conversation id
   projectId: string;
-  agentId: string;
   agentType: string;
   claudeSessionId?: string;
-  messages: ConversationMessage[];
   currentProcess: ChildProcess | null;
   isProcessing: boolean;
   cwd: string;
 }
 
 export class ConversationManager extends EventEmitter {
-  private conversations = new Map<string, ActiveConversation>();
+  private active = new Map<string, ActiveConversation>();
 
-  constructor(private agentService: AgentService) {
+  constructor(
+    private agentService: AgentService,
+    private db: any,
+  ) {
     super();
   }
 
   /**
-   * Start or get a conversation for a project.
+   * List conversations for a project.
    */
-  getOrCreate(
+  async listConversations(
     projectId: string,
-    agentId: string,
+  ): Promise<Array<{ id: string; title: string | null; agentType: string; isActive: number; createdAt: Date; updatedAt: Date; externalSessionId: string | null }>> {
+    return this.db
+      .select()
+      .from(conversations)
+      .where(eq(conversations.projectId, projectId))
+      .orderBy(desc(conversations.updatedAt));
+  }
+
+  /**
+   * Get or create a conversation for a project.
+   */
+  async getOrCreateConversation(
+    workspaceId: string,
+    projectId: string,
     agentType: string,
     cwd: string,
-  ): ActiveConversation {
-    let conv = this.conversations.get(projectId);
-    if (!conv) {
-      conv = {
+    conversationId?: string,
+  ): Promise<ActiveConversation> {
+    // If specific conversation requested, load it
+    if (conversationId) {
+      const existing = this.active.get(conversationId);
+      if (existing) return existing;
+
+      const [conv] = await this.db
+        .select()
+        .from(conversations)
+        .where(eq(conversations.id, conversationId))
+        .limit(1);
+
+      if (conv) {
+        const active: ActiveConversation = {
+          id: conv.id,
+          projectId,
+          agentType: conv.agentType,
+          claudeSessionId: conv.externalSessionId ?? undefined,
+          currentProcess: null,
+          isProcessing: false,
+          cwd,
+        };
+        this.active.set(conv.id, active);
+        return active;
+      }
+    }
+
+    // Check if there's an active conversation for this project in memory
+    for (const [, conv] of this.active) {
+      if (conv.projectId === projectId) return conv;
+    }
+
+    // Check DB for most recent active conversation
+    const [existing] = await this.db
+      .select()
+      .from(conversations)
+      .where(
+        and(
+          eq(conversations.projectId, projectId),
+          eq(conversations.isActive, 1),
+        ),
+      )
+      .orderBy(desc(conversations.updatedAt))
+      .limit(1);
+
+    if (existing) {
+      const active: ActiveConversation = {
+        id: existing.id,
         projectId,
-        agentId,
-        agentType,
-        messages: [],
+        agentType: existing.agentType,
+        claudeSessionId: existing.externalSessionId ?? undefined,
         currentProcess: null,
         isProcessing: false,
         cwd,
       };
-      this.conversations.set(projectId, conv);
+      this.active.set(existing.id, active);
+      return active;
     }
-    // Update agent if changed
-    conv.agentId = agentId;
-    conv.agentType = agentType;
-    conv.cwd = cwd;
-    return conv;
+
+    // Create new conversation
+    const title = `Conversation ${new Date().toLocaleDateString()}`;
+    const [newConv] = await this.db
+      .insert(conversations)
+      .values({
+        workspaceId,
+        projectId,
+        title,
+        agentType,
+      })
+      .returning();
+
+    const active: ActiveConversation = {
+      id: newConv.id,
+      projectId,
+      agentType,
+      currentProcess: null,
+      isProcessing: false,
+      cwd,
+    };
+    this.active.set(newConv.id, active);
+    return active;
   }
 
   /**
-   * Send a message in a conversation. Returns the response as it streams.
+   * Create a new conversation (explicit).
    */
-  async sendMessage(projectId: string, message: string): Promise<void> {
-    const conv = this.conversations.get(projectId);
-    if (!conv) throw new Error(`No conversation for project ${projectId}`);
+  async createConversation(
+    workspaceId: string,
+    projectId: string,
+    agentType: string,
+    cwd: string,
+    title?: string,
+  ): Promise<ActiveConversation> {
+    // Deactivate previous
+    await this.db
+      .update(conversations)
+      .set({ isActive: 0 })
+      .where(
+        and(
+          eq(conversations.projectId, projectId),
+          eq(conversations.isActive, 1),
+        ),
+      );
+
+    const [newConv] = await this.db
+      .insert(conversations)
+      .values({
+        workspaceId,
+        projectId,
+        title: title ?? `Conversation ${new Date().toLocaleDateString()}`,
+        agentType,
+      })
+      .returning();
+
+    // Remove old active from memory
+    for (const [key, conv] of this.active) {
+      if (conv.projectId === projectId) {
+        this.active.delete(key);
+      }
+    }
+
+    const active: ActiveConversation = {
+      id: newConv.id,
+      projectId,
+      agentType,
+      currentProcess: null,
+      isProcessing: false,
+      cwd,
+    };
+    this.active.set(newConv.id, active);
+    return active;
+  }
+
+  /**
+   * Get messages for a conversation.
+   */
+  async getMessages(
+    conversationId: string,
+  ): Promise<Array<{ role: string; content: string; createdAt: Date }>> {
+    return this.db
+      .select({
+        role: conversationMessages.role,
+        content: conversationMessages.content,
+        createdAt: conversationMessages.createdAt,
+      })
+      .from(conversationMessages)
+      .where(eq(conversationMessages.conversationId, conversationId))
+      .orderBy(conversationMessages.createdAt);
+  }
+
+  /**
+   * Send a message in a conversation.
+   */
+  async sendMessage(conversationId: string, message: string): Promise<void> {
+    const conv = this.active.get(conversationId);
+    if (!conv) throw new Error(`No active conversation: ${conversationId}`);
     if (conv.isProcessing)
       throw new Error("Agent is still processing previous message");
 
     conv.isProcessing = true;
-    conv.messages.push({
+
+    // Persist user message
+    await this.db.insert(conversationMessages).values({
+      conversationId,
       role: "user",
       content: message,
-      timestamp: new Date(),
     });
 
-    this.emit("message", { projectId, role: "user", content: message });
+    this.emit("message", { conversationId, projectId: conv.projectId, role: "user", content: message });
 
     try {
       const { command, args } = this.buildCommand(conv, message);
@@ -93,10 +241,8 @@ export class ConversationManager extends EventEmitter {
       conv.currentProcess = child;
       let fullResponse = "";
       let emittedLength = 0;
-      let sessionId: string | undefined;
       let doneEmitted = false;
 
-      // Parse stream-json output for claude-code
       if (conv.agentType === "claude-code") {
         let buffer = "";
         child.stdout?.on("data", (data: Buffer) => {
@@ -109,153 +255,100 @@ export class ConversationManager extends EventEmitter {
             try {
               const event = JSON.parse(line);
 
-              // Capture session ID from any event
-              if (event.session_id && !sessionId) {
-                sessionId = event.session_id;
-                conv.claudeSessionId = sessionId;
+              if (event.session_id && !conv.claudeSessionId) {
+                conv.claudeSessionId = event.session_id;
               }
 
-              // Result event — contains the final complete text
               if (event.type === "result") {
-                if (event.session_id) {
-                  conv.claudeSessionId = event.session_id;
-                }
-                // Use result text as the definitive response
+                if (event.session_id) conv.claudeSessionId = event.session_id;
                 const resultText = event.result ?? "";
                 if (resultText && resultText.length > emittedLength) {
                   const delta = resultText.substring(emittedLength);
                   fullResponse = resultText;
                   emittedLength = resultText.length;
-                  this.emit("stream", { projectId, text: delta, done: false });
+                  this.emit("stream", { conversationId, projectId: conv.projectId, text: delta, done: false });
                 }
                 continue;
               }
 
-              // Assistant message — extract text and emit only the delta
               if (event.type === "assistant" && event.message?.content) {
                 let currentText = "";
                 for (const block of event.message.content) {
-                  if (block.type === "text") {
-                    currentText += block.text;
-                  }
+                  if (block.type === "text") currentText += block.text;
                 }
-                // Only emit the new portion (delta)
                 if (currentText.length > emittedLength) {
                   const delta = currentText.substring(emittedLength);
                   fullResponse = currentText;
                   emittedLength = currentText.length;
-                  this.emit("stream", { projectId, text: delta, done: false });
+                  this.emit("stream", { conversationId, projectId: conv.projectId, text: delta, done: false });
                 }
               }
             } catch {
-              // Not JSON — treat as raw text
               fullResponse += line + "\n";
               emittedLength = fullResponse.length;
-              this.emit("stream", {
-                projectId,
-                text: line + "\n",
-                done: false,
-              });
+              this.emit("stream", { conversationId, projectId: conv.projectId, text: line + "\n", done: false });
             }
           }
         });
       } else {
-        // gemini-cli, codex — plain text output
         child.stdout?.on("data", (data: Buffer) => {
           const text = data.toString();
           fullResponse += text;
-          this.emit("stream", { projectId, text, done: false });
+          this.emit("stream", { conversationId, projectId: conv.projectId, text, done: false });
         });
       }
 
       child.stderr?.on("data", (data: Buffer) => {
-        const text = data.toString();
-        this.emit("stream", {
-          projectId,
-          text: `[stderr] ${text}`,
-          done: false,
-        });
+        this.emit("stream", { conversationId, projectId: conv.projectId, text: `[stderr] ${data.toString()}`, done: false });
       });
 
       await new Promise<void>((resolve) => {
-        const finish = () => {
+        const finish = async () => {
           if (doneEmitted) return;
           doneEmitted = true;
-
           conv.isProcessing = false;
           conv.currentProcess = null;
 
+          // Persist assistant message
           if (fullResponse.trim()) {
-            conv.messages.push({
+            await this.db.insert(conversationMessages).values({
+              conversationId,
               role: "assistant",
               content: fullResponse,
-              timestamp: new Date(),
             });
           }
 
-          this.emit("stream", { projectId, text: "", done: true });
-          this.emit("response", {
-            projectId,
-            content: fullResponse,
-            sessionId: conv.claudeSessionId,
-          });
+          // Persist claude session ID
+          if (conv.claudeSessionId) {
+            await this.db
+              .update(conversations)
+              .set({ externalSessionId: conv.claudeSessionId, updatedAt: new Date() })
+              .where(eq(conversations.id, conversationId));
+          }
+
+          this.emit("stream", { conversationId, projectId: conv.projectId, text: "", done: true });
           resolve();
         };
 
         child.on("close", finish);
-
         child.on("error", (err) => {
-          if (!doneEmitted) {
-            fullResponse += `\n[error] ${err.message}`;
-            this.emit("stream", {
-              projectId,
-              text: `[error] ${err.message}`,
-              done: false,
-            });
-          }
+          fullResponse += `\n[error] ${err.message}`;
+          this.emit("stream", { conversationId, projectId: conv.projectId, text: `[error] ${err.message}`, done: false });
           finish();
         });
       });
     } catch (err: any) {
       conv.isProcessing = false;
-      this.emit("stream", {
-        projectId,
-        text: `[error] ${err.message}`,
-        done: true,
-      });
+      this.emit("stream", { conversationId, projectId: conv.projectId, text: `[error] ${err.message}`, done: true });
     }
   }
 
-  /**
-   * Get conversation history.
-   */
-  getHistory(projectId: string): ConversationMessage[] {
-    return this.conversations.get(projectId)?.messages ?? [];
+  isProcessing(conversationId: string): boolean {
+    return this.active.get(conversationId)?.isProcessing ?? false;
   }
 
-  /**
-   * Check if a conversation is active.
-   */
-  isProcessing(projectId: string): boolean {
-    return this.conversations.get(projectId)?.isProcessing ?? false;
-  }
-
-  /**
-   * Clear conversation history (start fresh).
-   */
-  clear(projectId: string): void {
-    const conv = this.conversations.get(projectId);
-    if (conv) {
-      conv.messages = [];
-      conv.claudeSessionId = undefined;
-    }
-  }
-
-  /**
-   * Stop the current process.
-   */
-  stop(projectId: string): boolean {
-    const conv = this.conversations.get(projectId);
+  stop(conversationId: string): boolean {
+    const conv = this.active.get(conversationId);
     if (conv?.currentProcess) {
       conv.currentProcess.kill("SIGTERM");
       conv.isProcessing = false;
@@ -271,25 +364,14 @@ export class ConversationManager extends EventEmitter {
     switch (conv.agentType) {
       case "gemini-cli":
         return { command: "gemini", args: ["-p", message] };
-
       case "codex":
         return { command: "codex", args: ["-q", message] };
-
       case "claude-code":
       default: {
-        const args = [
-          "-p",
-          message,
-          "--output-format",
-          "stream-json",
-          "--verbose",
-        ];
-
-        // Resume previous session for conversation continuity
+        const args = ["-p", message, "--output-format", "stream-json", "--verbose"];
         if (conv.claudeSessionId) {
           args.push("--resume", conv.claudeSessionId);
         }
-
         return { command: "claude", args };
       }
     }

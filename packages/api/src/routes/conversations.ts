@@ -2,172 +2,135 @@ import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
 import type { AppEnv } from "../app.js";
 import type { ConversationManager } from "../conversation-manager.js";
-import { badRequest } from "../middleware/error.js";
+import { badRequest, notFound } from "../middleware/error.js";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function resolveProjectId(c: any, idOrKey: string, workspaceId: string): Promise<{ id: string; directory: string | null }> {
+  const svc = c.get("projectService");
+  const p = UUID_RE.test(idOrKey) ? await svc.getById(idOrKey) : await svc.getByKey(workspaceId, idOrKey);
+  if (!p) badRequest(`Project not found: ${idOrKey}`);
+  return { id: p!.id, directory: p!.directory };
+}
 
 export function createConversationRoutes(conversationManager: ConversationManager) {
   const conv = new Hono<AppEnv>();
 
-  // POST /api/v1/conversations/:projectId/start — initialize conversation
-  conv.post("/:projectId/start", async (c) => {
-    const projectService = c.get("projectService");
-    const agentService = c.get("agentService");
+  // GET /:projectId/list — list conversations for a project
+  conv.get("/:projectId/list", async (c) => {
     const workspaceId = c.get("workspaceId");
-    const projectIdParam = c.req.param("projectId");
-    const body = await c.req.json().catch(() => ({}));
-
-    // Resolve project
-    const project = UUID_RE.test(projectIdParam)
-      ? await projectService.getById(projectIdParam)
-      : await projectService.getByKey(workspaceId, projectIdParam);
-    if (!project) badRequest(`Project not found: ${projectIdParam}`);
-
-    // Find agent
-    const agentId = body.agentId ?? body.agent_id;
-    let agent;
-    if (agentId) {
-      agent = await agentService.getAgent(agentId);
-    } else {
-      agent = await agentService.getIdleAgent(workspaceId);
-    }
-    if (!agent) badRequest("No available agent");
-
-    const conversation = conversationManager.getOrCreate(
-      project!.id,
-      agent!.id,
-      agent!.agentType,
-      project!.directory ?? process.cwd(),
-    );
-
-    return c.json({
-      data: {
-        projectId: project!.id,
-        agentId: agent!.id,
-        agentType: agent!.agentType,
-        messageCount: conversation.messages.length,
-        isProcessing: conversation.isProcessing,
-      },
-    });
+    const { id: projectId } = await resolveProjectId(c, c.req.param("projectId"), workspaceId);
+    const list = await conversationManager.listConversations(projectId);
+    return c.json({ data: list });
   });
 
-  // POST /api/v1/conversations/:projectId/message — send a message
-  conv.post("/:projectId/message", async (c) => {
-    const projectService = c.get("projectService");
+  // POST /:projectId/new — create a new conversation
+  conv.post("/:projectId/new", async (c) => {
     const workspaceId = c.get("workspaceId");
-    const projectIdParam = c.req.param("projectId");
+    const agentService = c.get("agentService");
+    const { id: projectId, directory } = await resolveProjectId(c, c.req.param("projectId"), workspaceId);
+    const body = await c.req.json().catch(() => ({}));
+
+    let agentType = "claude-code";
+    if (body.agentId) {
+      const agent = await agentService.getAgent(body.agentId);
+      if (agent) agentType = agent.agentType;
+    }
+
+    const conversation = await conversationManager.createConversation(
+      workspaceId, projectId, agentType, directory ?? process.cwd(), body.title,
+    );
+    return c.json({ data: { id: conversation.id, agentType } }, 201);
+  });
+
+  // POST /:projectId/message — send message (auto-creates conversation if needed)
+  conv.post("/:projectId/message", async (c) => {
+    const workspaceId = c.get("workspaceId");
+    const agentService = c.get("agentService");
+    const { id: projectId, directory } = await resolveProjectId(c, c.req.param("projectId"), workspaceId);
     const body = await c.req.json();
 
     if (!body.message?.trim()) badRequest("message is required");
 
-    const project = UUID_RE.test(projectIdParam)
-      ? await projectService.getById(projectIdParam)
-      : await projectService.getByKey(workspaceId, projectIdParam);
-    if (!project) badRequest(`Project not found: ${projectIdParam}`);
-
-    const projectId = project!.id;
-
-    // Auto-start conversation if not exists
-    if (!conversationManager.getHistory(projectId).length && !conversationManager.isProcessing(projectId)) {
-      const agentService = c.get("agentService");
-      const agentId = body.agentId ?? body.agent_id;
-      let agent;
-      if (agentId) {
-        agent = await agentService.getAgent(agentId);
-      } else {
-        agent = await agentService.getIdleAgent(workspaceId);
-      }
-      if (!agent) badRequest("No available agent");
-
-      conversationManager.getOrCreate(
-        projectId,
-        agent!.id,
-        agent!.agentType,
-        project!.directory ?? process.cwd(),
-      );
+    let agentType = "claude-code";
+    if (body.agentId) {
+      const agent = await agentService.getAgent(body.agentId);
+      if (agent) agentType = agent.agentType;
     }
 
-    if (conversationManager.isProcessing(projectId)) {
-      badRequest("Agent is still processing previous message. Wait or stop it first.");
+    // Get or create conversation
+    const conversation = await conversationManager.getOrCreateConversation(
+      workspaceId, projectId, agentType, directory ?? process.cwd(), body.conversationId,
+    );
+
+    if (conversationManager.isProcessing(conversation.id)) {
+      badRequest("Agent is still processing. Wait or stop first.");
     }
 
-    // Fire and forget — client will listen via SSE
-    conversationManager.sendMessage(projectId, body.message.trim()).catch(() => {});
+    conversationManager.sendMessage(conversation.id, body.message.trim()).catch(() => {});
 
-    return c.json({ data: { sent: true, projectId } });
+    return c.json({ data: { sent: true, conversationId: conversation.id } });
   });
 
-  // GET /api/v1/conversations/:projectId/stream — SSE stream
+  // GET /:projectId/stream — SSE stream (listens to active conversation)
   conv.get("/:projectId/stream", async (c) => {
-    const projectService = c.get("projectService");
     const workspaceId = c.get("workspaceId");
-    const projectIdParam = c.req.param("projectId");
-
-    const project = UUID_RE.test(projectIdParam)
-      ? await projectService.getById(projectIdParam)
-      : await projectService.getByKey(workspaceId, projectIdParam);
-
-    const projectId = project?.id ?? projectIdParam;
+    const { id: projectId } = await resolveProjectId(c, c.req.param("projectId"), workspaceId);
 
     return streamSSE(c, async (stream) => {
-      const handler = (event: { projectId: string; text: string; done: boolean }) => {
+      const handler = (event: { projectId: string; conversationId: string; text: string; done: boolean }) => {
         if (event.projectId === projectId) {
           stream.writeSSE({
-            data: JSON.stringify({ text: event.text, done: event.done }),
+            data: JSON.stringify({ text: event.text, done: event.done, conversationId: event.conversationId }),
             event: "stream",
           }).catch(() => {});
         }
       };
 
       conversationManager.on("stream", handler);
-
-      const keepAlive = setInterval(() => {
-        stream.writeSSE({ data: "", event: "ping" }).catch(() => {});
-      }, 15000);
+      const keepAlive = setInterval(() => { stream.writeSSE({ data: "", event: "ping" }).catch(() => {}); }, 15000);
 
       stream.onAbort(() => {
         conversationManager.off("stream", handler);
         clearInterval(keepAlive);
       });
 
-      // Keep alive until client disconnects
       await new Promise<void>(() => {});
     });
   });
 
-  // GET /api/v1/conversations/:projectId/history — get conversation history
+  // GET /:projectId/history?conversation_id=... — get messages
   conv.get("/:projectId/history", async (c) => {
-    const projectService = c.get("projectService");
     const workspaceId = c.get("workspaceId");
-    const projectIdParam = c.req.param("projectId");
+    const { id: projectId, directory } = await resolveProjectId(c, c.req.param("projectId"), workspaceId);
+    const conversationId = c.req.query("conversation_id");
 
-    const project = UUID_RE.test(projectIdParam)
-      ? await projectService.getById(projectIdParam)
-      : await projectService.getByKey(workspaceId, projectIdParam);
+    const conversation = await conversationManager.getOrCreateConversation(
+      workspaceId, projectId, "claude-code", directory ?? process.cwd(), conversationId ?? undefined,
+    );
 
-    const projectId = project?.id ?? projectIdParam;
-    const history = conversationManager.getHistory(projectId);
+    const messages = await conversationManager.getMessages(conversation.id);
 
     return c.json({
       data: {
-        messages: history,
-        isProcessing: conversationManager.isProcessing(projectId),
+        conversationId: conversation.id,
+        messages,
+        isProcessing: conversationManager.isProcessing(conversation.id),
       },
     });
   });
 
-  // POST /api/v1/conversations/:projectId/stop — stop current response
+  // POST /:projectId/stop
   conv.post("/:projectId/stop", async (c) => {
-    const projectIdParam = c.req.param("projectId");
-    const stopped = conversationManager.stop(projectIdParam);
-    return c.json({ data: { stopped } });
-  });
+    const workspaceId = c.get("workspaceId");
+    const { id: projectId, directory } = await resolveProjectId(c, c.req.param("projectId"), workspaceId);
 
-  // POST /api/v1/conversations/:projectId/clear — clear history
-  conv.post("/:projectId/clear", async (c) => {
-    const projectIdParam = c.req.param("projectId");
-    conversationManager.clear(projectIdParam);
-    return c.json({ data: { cleared: true } });
+    // Find active conversation
+    const conversation = await conversationManager.getOrCreateConversation(
+      workspaceId, projectId, "claude-code", directory ?? process.cwd(),
+    );
+    const stopped = conversationManager.stop(conversation.id);
+    return c.json({ data: { stopped } });
   });
 
   return conv;

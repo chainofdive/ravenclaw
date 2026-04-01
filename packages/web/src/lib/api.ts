@@ -353,20 +353,20 @@ export const api = {
     apiFetch<Array<{ directiveId: string; agentId: string; status: string; pid: number; startedAt: string; logLines: number }>>('/sse/processes'),
 
   // Conversations (interactive chat)
-  startConversation: (projectId: string, agentId?: string) =>
-    apiFetch<{ projectId: string; agentId: string; agentType: string }>(`/conversations/${encodeURIComponent(projectId)}/start`, {
+  listConversations: (projectId: string) =>
+    apiFetch<Array<{ id: string; title: string | null; agentType: string; isActive: number; createdAt: string; updatedAt: string }>>(`/conversations/${encodeURIComponent(projectId)}/list`),
+  newConversation: (projectId: string, agentId?: string, title?: string) =>
+    apiFetch<{ id: string; agentType: string }>(`/conversations/${encodeURIComponent(projectId)}/new`, {
       method: 'POST',
-      body: JSON.stringify(agentId ? { agentId } : {}),
+      body: JSON.stringify({ agentId, title }),
     }),
-  sendConversationMessage: (projectId: string, message: string, agentId?: string) =>
-    apiFetch<{ sent: boolean }>(`/conversations/${encodeURIComponent(projectId)}/message`, {
+  sendConversationMessage: (projectId: string, message: string, conversationId?: string, agentId?: string) =>
+    apiFetch<{ sent: boolean; conversationId: string }>(`/conversations/${encodeURIComponent(projectId)}/message`, {
       method: 'POST',
-      body: JSON.stringify({ message, agentId }),
+      body: JSON.stringify({ message, conversationId, agentId }),
     }),
-  getConversationHistory: (projectId: string) =>
-    apiFetch<{ messages: Array<{ role: string; content: string; timestamp: string }>; isProcessing: boolean }>(`/conversations/${encodeURIComponent(projectId)}/history`),
+  getConversationHistory: (projectId: string, conversationId?: string) =>
+    apiFetch<{ conversationId: string; messages: Array<{ role: string; content: string; createdAt: string }>; isProcessing: boolean }>(`/conversations/${encodeURIComponent(projectId)}/history${conversationId ? `?conversation_id=${conversationId}` : ''}`),
   stopConversation: (projectId: string) =>
     apiFetch<{ stopped: boolean }>(`/conversations/${encodeURIComponent(projectId)}/stop`, { method: 'POST' }),
-  clearConversation: (projectId: string) =>
-    apiFetch<{ cleared: boolean }>(`/conversations/${encodeURIComponent(projectId)}/clear`, { method: 'POST' }),
 };
