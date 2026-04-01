@@ -37,7 +37,7 @@ test.describe('Projects page', () => {
     await page.goto('/projects');
     // Click Command button to open overlay
     await page.getByRole('button', { name: 'Command' }).click();
-    await expect(page.getByPlaceholder('Instruct agent', { exact: false })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByPlaceholder('Message', { exact: false })).toBeVisible({ timeout: 5000 });
   });
 
   test('switches to history view', async ({ page }) => {
@@ -51,7 +51,7 @@ test.describe('Projects page', () => {
     await page.getByRole('button', { name: 'Command' }).click();
 
     const uniqueCmd = `E2E cmd ${Date.now()}`;
-    await page.getByPlaceholder('Instruct agent', { exact: false }).fill(uniqueCmd);
+    await page.getByPlaceholder('Message', { exact: false }).fill(uniqueCmd);
     await page.getByRole('button', { name: 'Send' }).click();
 
     await expect(page.getByText(uniqueCmd).first()).toBeVisible({ timeout: 5000 });

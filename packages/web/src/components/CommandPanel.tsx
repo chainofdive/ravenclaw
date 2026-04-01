@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { api, type AgentInfo, type WorkDirectiveInfo } from '../lib/api';
+import { api, type AgentInfo } from '../lib/api';
 import { FilePreview, parseFileLinks } from './FilePreview';
 
 interface Props {
@@ -7,93 +7,119 @@ interface Props {
   projectKey: string;
 }
 
+interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+  streaming?: boolean;
+}
+
 export function CommandPanel({ projectId, projectKey }: Props) {
   const [agents, setAgents] = useState<AgentInfo[]>([]);
-  const [directives, setDirectives] = useState<WorkDirectiveInfo[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [selectedAgent, setSelectedAgent] = useState('');
-  const [expandedLogs, setExpandedLogs] = useState<string | null>(null);
-  const [logs, setLogs] = useState<string[]>([]);
-  const [sending, setSending] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [streamingText, setStreamingText] = useState('');
   const [previewFile, setPreviewFile] = useState<string | null>(null);
+  const [connected, setConnected] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const logEndRef = useRef<HTMLDivElement>(null);
+  const eventSourceRef = useRef<EventSource | null>(null);
 
-  const load = useCallback(() => {
+  // Load agents
+  useEffect(() => {
     api.listAgents().then(setAgents).catch(() => {});
-    api.listDirectives(projectId).then(setDirectives).catch(() => {});
+  }, []);
+
+  // Load conversation history
+  useEffect(() => {
+    api.getConversationHistory(projectId).then((data) => {
+      setMessages(data.messages.map((m) => ({
+        role: m.role as 'user' | 'assistant',
+        content: m.content,
+        timestamp: m.timestamp,
+      })));
+      setIsProcessing(data.isProcessing);
+    }).catch(() => {});
   }, [projectId]);
 
+  // SSE connection for streaming
   useEffect(() => {
-    load();
-    const interval = setInterval(load, 5000);
-    return () => clearInterval(interval);
-  }, [load]);
+    const es = new EventSource(`/api/v1/conversations/${encodeURIComponent(projectId)}/stream`);
+    eventSourceRef.current = es;
 
-  // Auto-refresh logs for running directive
-  useEffect(() => {
-    if (!expandedLogs) return;
-    const d = directives.find((d) => d.id === expandedLogs);
-    if (!d || (d.status !== 'running' && d.status !== 'assigned')) return;
-
-    const interval = setInterval(async () => {
+    es.addEventListener('stream', (e) => {
       try {
-        const result = await api.getDirectiveLogs(expandedLogs);
-        setLogs(result.logs);
-      } catch { /* ignore */ }
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [expandedLogs, directives]);
-
-  const handleSend = async () => {
-    if (!input.trim()) return;
-    setSending(true);
-    try {
-      // Create directive
-      const directive = await api.createDirective({
-        instruction: input.trim(),
-        projectId,
-      });
-
-      // Auto-dispatch to selected or idle agent
-      try {
-        if (selectedAgent) {
-          await api.dispatchDirective(directive.id, selectedAgent);
-        } else {
-          await api.dispatchDirective(directive.id);
+        const data = JSON.parse(e.data);
+        if (data.done) {
+          // Response complete — move streaming text to messages
+          setStreamingText((prev) => {
+            if (prev.trim()) {
+              setMessages((msgs) => [
+                ...msgs.filter((m) => !m.streaming),
+                { role: 'assistant', content: prev, timestamp: new Date().toISOString() },
+              ]);
+            }
+            return '';
+          });
+          setIsProcessing(false);
+        } else if (data.text) {
+          setStreamingText((prev) => prev + data.text);
         }
-      } catch {
-        // No idle agent — stays pending
-      }
+      } catch { /* ignore */ }
+    });
 
-      setInput('');
-      load();
-      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 200);
-    } catch {
-      // ignore
+    es.addEventListener('open', () => setConnected(true));
+    es.addEventListener('error', () => setConnected(false));
+
+    return () => {
+      es.close();
+      eventSourceRef.current = null;
+    };
+  }, [projectId]);
+
+  // Auto-scroll
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, streamingText]);
+
+  const handleSend = useCallback(async () => {
+    if (!input.trim() || isProcessing) return;
+
+    const message = input.trim();
+    setInput('');
+    setIsProcessing(true);
+    setStreamingText('');
+
+    // Add user message immediately
+    setMessages((prev) => [
+      ...prev,
+      { role: 'user', content: message, timestamp: new Date().toISOString() },
+    ]);
+
+    try {
+      await api.sendConversationMessage(projectId, message, selectedAgent || undefined);
+    } catch (err: any) {
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: `[Error] ${err.message}`, timestamp: new Date().toISOString() },
+      ]);
+      setIsProcessing(false);
     }
-    setSending(false);
+  }, [input, isProcessing, projectId, selectedAgent]);
+
+  const handleStop = async () => {
+    try {
+      await api.stopConversation(projectId);
+      setIsProcessing(false);
+    } catch { /* ignore */ }
   };
 
-  const handleViewLogs = async (id: string) => {
-    if (expandedLogs === id) {
-      setExpandedLogs(null);
-      setLogs([]);
-      return;
-    }
-    setExpandedLogs(id);
+  const handleClear = async () => {
     try {
-      const result = await api.getDirectiveLogs(id);
-      setLogs(result.logs);
-    } catch {
-      setLogs([]);
-    }
-  };
-
-  const handleKill = async (id: string) => {
-    try {
-      await api.killDirective(id);
-      load();
+      await api.clearConversation(projectId);
+      setMessages([]);
+      setStreamingText('');
     } catch { /* ignore */ }
   };
 
@@ -125,135 +151,85 @@ export function CommandPanel({ projectId, projectKey }: Props) {
     );
   };
 
-  const statusIcon = (status: string) => {
-    switch (status) {
-      case 'completed': return '✓';
-      case 'running': return '●';
-      case 'assigned': return '◐';
-      case 'pending': return '○';
-      case 'failed': return '✗';
-      case 'cancelled': return '—';
-      default: return '?';
-    }
-  };
-
-  const statusColor = (status: string) => {
-    switch (status) {
-      case 'completed': return 'text-emerald-500';
-      case 'running': return 'text-blue-500 animate-pulse';
-      case 'assigned': return 'text-blue-400';
-      case 'pending': return 'text-gray-400';
-      case 'failed': return 'text-red-500';
-      case 'cancelled': return 'text-gray-400';
-      default: return 'text-gray-400';
-    }
-  };
-
   const idleAgents = agents.filter((a) => a.status === 'idle');
 
   return (
     <div className="flex flex-col h-full px-3 py-2">
-      {/* Directive history — scrollable */}
-      <div className="flex-1 overflow-y-auto space-y-2 pb-2">
-        {directives.length === 0 && (
-          <div className="flex items-center justify-center h-32 text-slate-400 text-sm">
-            No directives yet. Type an instruction below to get started.
+      {/* Chat messages */}
+      <div className="flex-1 overflow-y-auto space-y-3 pb-2">
+        {messages.length === 0 && !streamingText && (
+          <div className="flex items-center justify-center h-24 text-slate-400 text-sm">
+            Start a conversation with your agent.
           </div>
         )}
-        {[...directives].reverse().map((d) => {
-          const agent = agents.find((a) => a.id === d.assignedWorkerId);
-          return (
-            <div key={d.id} className="group">
-              {/* Directive bubble */}
-              <div className="flex gap-3">
-                <span className={`mt-1 text-lg ${statusColor(d.status)}`}>
-                  {statusIcon(d.status)}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <div className="bg-white border border-gray-200 rounded-xl px-4 py-3 shadow-sm">
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-2">
-                        {agent && <span className="text-xs text-teal-600">{agent.name}</span>}
-                        <span className="text-xs text-gray-400">
-                          {new Date(d.createdAt).toLocaleTimeString()}
-                        </span>
-                      </div>
-                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {d.status === 'running' && (
-                          <button
-                            onClick={() => handleKill(d.id)}
-                            className="text-xs px-1.5 py-0.5 bg-red-100 text-red-600 rounded hover:bg-red-200"
-                          >
-                            Stop
-                          </button>
-                        )}
-                        <button
-                          onClick={() => handleViewLogs(d.id)}
-                          className={`text-xs px-1.5 py-0.5 rounded ${
-                            expandedLogs === d.id ? 'bg-teal-100 text-teal-700' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                          }`}
-                        >
-                          Logs
-                        </button>
-                      </div>
-                    </div>
-                    <p className="text-sm text-slate-800 whitespace-pre-wrap"><FileLinkedText text={d.instruction} /></p>
-                    {d.result && d.status === 'completed' && (
-                      <div className="mt-2 pt-2 border-t border-gray-100">
-                        <p className="text-xs text-emerald-600 font-medium mb-1">Result</p>
-                        <p className="text-xs text-slate-600 whitespace-pre-wrap max-h-32 overflow-y-auto"><FileLinkedText text={d.result} /></p>
-                      </div>
-                    )}
-                    {d.result && d.status === 'failed' && (
-                      <div className="mt-2 pt-2 border-t border-red-100">
-                        <p className="text-xs text-red-600 font-medium mb-1">Error</p>
-                        <p className="text-xs text-red-500 whitespace-pre-wrap max-h-20 overflow-y-auto"><FileLinkedText text={d.result} /></p>
-                      </div>
-                    )}
-                  </div>
 
-                  {/* Inline logs */}
-                  {expandedLogs === d.id && (
-                    <div className="mt-1 bg-gray-900 rounded-lg p-3 max-h-60 overflow-y-auto font-mono text-xs">
-                      {logs.length === 0 ? (
-                        <p className="text-gray-500">No logs available</p>
-                      ) : (
-                        <>
-                          {logs.map((line, i) => (
-                            <div key={i} className={`whitespace-pre-wrap ${
-                              line.startsWith('[stderr]') ? 'text-red-400' :
-                              line.startsWith('[error]') ? 'text-red-300' :
-                              'text-green-300'
-                            }`}><FileLinkedText text={line} /></div>
-                          ))}
-                          <div ref={logEndRef} />
-                        </>
-                      )}
-                    </div>
-                  )}
-                </div>
+        {messages.map((msg, i) => (
+          <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div className={`max-w-[85%] rounded-xl px-3.5 py-2.5 text-sm ${
+              msg.role === 'user'
+                ? 'bg-teal-500 text-white'
+                : 'bg-gray-100 text-slate-800'
+            }`}>
+              {msg.role === 'assistant' ? (
+                <div className="whitespace-pre-wrap"><FileLinkedText text={msg.content} /></div>
+              ) : (
+                <div className="whitespace-pre-wrap">{msg.content}</div>
+              )}
+              <div className={`text-xs mt-1 ${msg.role === 'user' ? 'text-teal-200' : 'text-slate-400'}`}>
+                {new Date(msg.timestamp).toLocaleTimeString()}
               </div>
             </div>
-          );
-        })}
+          </div>
+        ))}
+
+        {/* Streaming response */}
+        {streamingText && (
+          <div className="flex justify-start">
+            <div className="max-w-[85%] rounded-xl px-3.5 py-2.5 text-sm bg-gray-100 text-slate-800">
+              <div className="whitespace-pre-wrap"><FileLinkedText text={streamingText} /></div>
+              <span className="inline-block w-2 h-4 bg-teal-500 animate-pulse ml-0.5" />
+            </div>
+          </div>
+        )}
+
+        {/* Processing indicator (no streaming yet) */}
+        {isProcessing && !streamingText && (
+          <div className="flex justify-start">
+            <div className="rounded-xl px-3.5 py-2.5 bg-gray-100">
+              <div className="flex items-center gap-2 text-sm text-slate-400">
+                <div className="flex gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+                Thinking...
+              </div>
+            </div>
+          </div>
+        )}
+
         <div ref={bottomRef} />
       </div>
 
       {/* Input bar */}
-      <div className="border-t border-gray-200 pt-3 space-y-2">
-        <div className="flex gap-2 items-center">
+      <div className="border-t border-gray-200 pt-2 space-y-2 shrink-0">
+        <div className="flex items-center gap-2 text-xs">
           <select
             value={selectedAgent}
             onChange={(e) => setSelectedAgent(e.target.value)}
-            className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-teal-300"
+            className="border border-gray-200 rounded-lg px-2 py-1 bg-white text-xs focus:outline-none focus:ring-2 focus:ring-teal-300"
           >
-            <option value="">Auto (idle agent)</option>
+            <option value="">Auto agent</option>
             {idleAgents.map((a) => (
-              <option key={a.id} value={a.id}>{a.name}</option>
+              <option key={a.id} value={a.id}>{a.name} ({a.agentType})</option>
             ))}
           </select>
-          {idleAgents.length === 0 && (
-            <span className="text-xs text-orange-500">No idle agents</span>
+          <span className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-green-400' : 'bg-red-400'}`} />
+          <span className="text-slate-400">{connected ? 'connected' : 'disconnected'}</span>
+          {messages.length > 0 && (
+            <button onClick={handleClear} className="ml-auto text-slate-400 hover:text-red-500 transition-colors">
+              Clear
+            </button>
           )}
         </div>
         <div className="flex gap-2">
@@ -266,22 +242,30 @@ export function CommandPanel({ projectId, projectKey }: Props) {
                 handleSend();
               }
             }}
-            placeholder={`Instruct agent on ${projectKey}... (Enter to send, Shift+Enter for newline)`}
+            placeholder={`Message ${projectKey}... (Enter to send)`}
             rows={2}
             className="flex-1 text-sm border border-gray-200 rounded-xl px-4 py-2.5 resize-none bg-white focus:outline-none focus:ring-2 focus:ring-teal-300"
-            disabled={sending}
+            disabled={isProcessing}
           />
-          <button
-            onClick={handleSend}
-            disabled={sending || !input.trim()}
-            className="px-5 py-2.5 text-sm font-medium bg-teal-500 text-white rounded-xl hover:bg-teal-600 disabled:opacity-50 transition-colors self-end"
-          >
-            {sending ? '...' : 'Send'}
-          </button>
+          {isProcessing ? (
+            <button
+              onClick={handleStop}
+              className="px-4 py-2.5 text-sm font-medium bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors self-end"
+            >
+              Stop
+            </button>
+          ) : (
+            <button
+              onClick={handleSend}
+              disabled={!input.trim()}
+              className="px-4 py-2.5 text-sm font-medium bg-teal-500 text-white rounded-xl hover:bg-teal-600 disabled:opacity-50 transition-colors self-end"
+            >
+              Send
+            </button>
+          )}
         </div>
       </div>
 
-      {/* File preview modal */}
       {previewFile && (
         <FilePreview path={previewFile} projectId={projectId} onClose={() => setPreviewFile(null)} />
       )}

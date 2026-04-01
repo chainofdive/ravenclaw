@@ -19,6 +19,7 @@ import {
 } from "@ravenclaw/core";
 import { createApp } from "./app.js";
 import { ProcessManager } from "./process-manager.js";
+import { ConversationManager } from "./conversation-manager.js";
 
 const PORT = parseInt(process.env.PORT || "3000", 10);
 const HOST = process.env.HOST || "0.0.0.0";
@@ -80,6 +81,9 @@ processManager.on("exit", async ({ directiveId, status, code }) => {
   }
 });
 
+// Create conversation manager
+const conversationManager = new ConversationManager(agentService);
+
 // Create the Hono application
 const app = createApp({
   db,
@@ -97,6 +101,7 @@ const app = createApp({
   humanInputService,
   agentService,
   processManager,
+  conversationManager,
 });
 
 // Start the server

@@ -36,6 +36,8 @@ import agentRoutes from "./routes/agents.js";
 import fileRoutes from "./routes/files.js";
 import { createSseRoutes } from "./routes/sse.js";
 import type { ProcessManager } from "./process-manager.js";
+import type { ConversationManager } from "./conversation-manager.js";
+import { createConversationRoutes } from "./routes/conversations.js";
 
 /**
  * Application environment type for Hono context.
@@ -59,6 +61,7 @@ export type AppEnv = {
     humanInputService: HumanInputService;
     agentService: AgentService;
     processManager: ProcessManager;
+    conversationManager: ConversationManager;
   };
 };
 
@@ -78,6 +81,7 @@ export interface AppServices {
   humanInputService: HumanInputService;
   agentService: AgentService;
   processManager: ProcessManager;
+  conversationManager: ConversationManager;
 }
 
 /**
@@ -111,6 +115,7 @@ export function createApp(services: AppServices): Hono<AppEnv> {
     c.set("humanInputService", services.humanInputService);
     c.set("agentService", services.agentService);
     c.set("processManager", services.processManager);
+    c.set("conversationManager", services.conversationManager);
     await next();
   });
 
@@ -135,6 +140,7 @@ export function createApp(services: AppServices): Hono<AppEnv> {
   app.route("/api/v1/agents", agentRoutes);
   app.route("/api/v1/files", fileRoutes);
   app.route("/api/v1/sse", createSseRoutes(services.processManager));
+  app.route("/api/v1/conversations", createConversationRoutes(services.conversationManager));
 
   // Global onError fallback (catches errors that escape middleware)
   app.onError((err, c) => {

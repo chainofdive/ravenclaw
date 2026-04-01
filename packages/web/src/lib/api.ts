@@ -351,4 +351,22 @@ export const api = {
     apiFetch<{ directiveId: string; status: string; logs: string[]; logLines: number }>(`/agents/directives/${encodeURIComponent(id)}/logs`),
   getActiveProcesses: () =>
     apiFetch<Array<{ directiveId: string; agentId: string; status: string; pid: number; startedAt: string; logLines: number }>>('/sse/processes'),
+
+  // Conversations (interactive chat)
+  startConversation: (projectId: string, agentId?: string) =>
+    apiFetch<{ projectId: string; agentId: string; agentType: string }>(`/conversations/${encodeURIComponent(projectId)}/start`, {
+      method: 'POST',
+      body: JSON.stringify(agentId ? { agentId } : {}),
+    }),
+  sendConversationMessage: (projectId: string, message: string, agentId?: string) =>
+    apiFetch<{ sent: boolean }>(`/conversations/${encodeURIComponent(projectId)}/message`, {
+      method: 'POST',
+      body: JSON.stringify({ message, agentId }),
+    }),
+  getConversationHistory: (projectId: string) =>
+    apiFetch<{ messages: Array<{ role: string; content: string; timestamp: string }>; isProcessing: boolean }>(`/conversations/${encodeURIComponent(projectId)}/history`),
+  stopConversation: (projectId: string) =>
+    apiFetch<{ stopped: boolean }>(`/conversations/${encodeURIComponent(projectId)}/stop`, { method: 'POST' }),
+  clearConversation: (projectId: string) =>
+    apiFetch<{ cleared: boolean }>(`/conversations/${encodeURIComponent(projectId)}/clear`, { method: 'POST' }),
 };
