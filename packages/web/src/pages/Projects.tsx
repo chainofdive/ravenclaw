@@ -260,7 +260,7 @@ export function Projects() {
                   )}
                   {!graphLoading && graphData && (
                     <div className="h-[calc(100vh-14rem)]">
-                      <ProjectTreeGraph data={graphData} />
+                      <ProjectTreeGraph data={graphData} onNodeSelect={(type, id) => setDetailTarget({ type, id })} />
                     </div>
                   )}
                 </div>

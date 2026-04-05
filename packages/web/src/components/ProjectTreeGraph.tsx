@@ -162,7 +162,7 @@ export interface ProjectGraphData {
 
 // --- Main ---
 
-export function ProjectTreeGraph({ data }: { data: ProjectGraphData }) {
+export function ProjectTreeGraph({ data, onNodeSelect }: { data: ProjectGraphData; onNodeSelect?: (type: 'project' | 'epic' | 'issue', id: string) => void }) {
   const { initialNodes, initialEdges } = useMemo(() => {
     const nodes: Node[] = [];
     const edges: Edge[] = [];
@@ -286,6 +286,15 @@ export function ProjectTreeGraph({ data }: { data: ProjectGraphData }) {
     setTimeout(() => instance.fitView({ padding: 0.15 }), 50);
   }, []);
 
+  const handleNodeClick = useCallback((_: any, node: Node) => {
+    if (!onNodeSelect) return;
+    const [type, ...idParts] = node.id.split('-');
+    const id = idParts.join('-');
+    if (type === 'project' || type === 'epic' || type === 'issue') {
+      onNodeSelect(type, id);
+    }
+  }, [onNodeSelect]);
+
   if (initialNodes.length === 0) {
     return <div className="flex items-center justify-center h-96 text-slate-400">No data to display</div>;
   }
@@ -297,6 +306,7 @@ export function ProjectTreeGraph({ data }: { data: ProjectGraphData }) {
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        onNodeClick={handleNodeClick}
         onInit={onInit}
         nodeTypes={nodeTypes}
         fitView

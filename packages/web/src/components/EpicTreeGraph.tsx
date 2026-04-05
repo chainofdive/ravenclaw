@@ -143,7 +143,7 @@ export interface GraphData {
 
 // --- Main Component ---
 
-export function EpicTreeGraph({ data }: { data: GraphData }) {
+export function EpicTreeGraph({ data, onNodeSelect }: { data: GraphData; onNodeSelect?: (type: 'epic' | 'issue', id: string) => void }) {
   const { initialNodes, initialEdges } = useMemo(() => {
     const nodes: Node[] = [];
     const edges: Edge[] = [];
@@ -233,6 +233,15 @@ export function EpicTreeGraph({ data }: { data: GraphData }) {
     setTimeout(() => instance.fitView({ padding: 0.2 }), 50);
   }, []);
 
+  const handleNodeClick = useCallback((_: any, node: Node) => {
+    if (!onNodeSelect) return;
+    const [type, ...idParts] = node.id.split('-');
+    const id = idParts.join('-');
+    if (type === 'epic' || type === 'issue') {
+      onNodeSelect(type, id);
+    }
+  }, [onNodeSelect]);
+
   if (initialNodes.length === 0) {
     return (
       <div className="flex items-center justify-center h-96 text-slate-400">
@@ -248,6 +257,7 @@ export function EpicTreeGraph({ data }: { data: GraphData }) {
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        onNodeClick={handleNodeClick}
         onInit={onInit}
         nodeTypes={nodeTypes}
         fitView

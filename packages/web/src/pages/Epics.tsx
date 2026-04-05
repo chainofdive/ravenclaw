@@ -139,7 +139,7 @@ export function Epics() {
               </div>
             </div>
           )}
-          {!graphLoading && graphData && <EpicTreeGraph data={graphData} />}
+          {!graphLoading && graphData && <EpicTreeGraph data={graphData} onNodeSelect={(type, id) => setDetailTarget({ type, id })} />}
           {!graphLoading && !graphData && epics.length === 0 && <p className="text-slate-400">Loading...</p>}
         </>
       )}
