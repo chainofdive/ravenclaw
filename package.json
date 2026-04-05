@@ -8,6 +8,7 @@
     "url": "https://github.com/chainofdive/ravenclaw.git"
   },
   "license": "Apache-2.0",
+  "homepage": "https://github.com/chainofdive/ravenclaw",
   "engines": {
     "node": ">=22.0.0",
     "pnpm": ">=9.0.0"
