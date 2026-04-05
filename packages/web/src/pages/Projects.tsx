@@ -9,6 +9,7 @@ import { ProjectTreeGraph, type ProjectGraphData } from '../components/ProjectTr
 import { PendingInputs } from '../components/PendingInputs';
 import { CommandPanel } from '../components/CommandPanel';
 import { ResizeHandle } from '../components/ResizeHandle';
+import { DetailPanel } from '../components/DetailPanel';
 
 const LEFT_MIN = 160;
 const LEFT_DEFAULT = 224;
@@ -28,6 +29,7 @@ export function Projects() {
   const [leftWidth, setLeftWidth] = useState(LEFT_DEFAULT);
   const [cmdWidth, setCmdWidth] = useState(CMD_DEFAULT);
   const [error, setError] = useState('');
+  const [detailTarget, setDetailTarget] = useState<{ type: 'project' | 'epic' | 'issue'; id: string } | null>(null);
 
   // Graph
   const [graphData, setGraphData] = useState<ProjectGraphData | null>(null);
@@ -135,7 +137,9 @@ export function Projects() {
             <div className="px-5 pt-4 pb-2 border-b border-gray-200 bg-white shrink-0">
               <div className="flex items-center justify-between mb-2">
                 <div>
-                  <h2 className="text-lg font-semibold text-slate-900">
+                  <h2 className="text-lg font-semibold text-slate-900 cursor-pointer hover:text-teal-600 transition-colors"
+                    onClick={() => setDetailTarget({ type: 'project', id: selectedProject.id })}
+                    title="Click to view details">
                     <span className="text-purple-500 font-mono mr-2">{selectedProject.key}</span>
                     {selectedProject.name}
                   </h2>
@@ -201,7 +205,10 @@ export function Projects() {
                             <span className="text-slate-400 text-xs">{expandedEpic === epic.id ? '▾' : '▸'}</span>
                             <span className="text-xs text-teal-600 font-mono">{epic.key}</span>
                             <PriorityBadge priority={epic.priority} />
-                            <span className="text-sm font-medium text-slate-700">{epic.title}</span>
+                            <span className="text-sm font-medium text-slate-700 hover:text-teal-600 transition-colors"
+                              onClick={(e) => { e.stopPropagation(); setDetailTarget({ type: 'epic', id: epic.id }); }}>
+                              {epic.title}
+                            </span>
                           </div>
                           <div className="flex items-center gap-2">
                             <LockBadge epicId={epic.id} />
@@ -220,11 +227,12 @@ export function Projects() {
                       {expandedEpic === epic.id && (
                         <div className="px-4 pb-3 ml-5 space-y-1 border-t border-gray-100 pt-2">
                           {(epic.issues || []).map((issue) => (
-                            <div key={issue.id} className="flex items-center gap-3 py-1.5 hover:bg-gray-50 rounded-lg px-2 transition-colors">
+                            <div key={issue.id} className="flex items-center gap-3 py-1.5 hover:bg-gray-50 rounded-lg px-2 transition-colors cursor-pointer"
+                              onClick={() => setDetailTarget({ type: 'issue', id: issue.id })}>
                               <StatusBadge status={issue.status} />
                               <PriorityBadge priority={issue.priority} />
                               <span className="text-xs text-slate-400 font-mono">{issue.key}</span>
-                              <span className="text-sm text-slate-700">{issue.title}</span>
+                              <span className="text-sm text-slate-700 hover:text-teal-600 transition-colors">{issue.title}</span>
                               <span className="text-xs px-1.5 py-0.5 bg-gray-100 rounded-md text-slate-500 ml-auto">{issue.issueType}</span>
                               {issue.assignee && <span className="text-xs text-slate-400">@{issue.assignee}</span>}
                             </div>
@@ -410,6 +418,16 @@ export function Projects() {
             </div>
           </div>
         </>
+      )}
+
+      {detailTarget && (
+        <DetailPanel entityType={detailTarget.type} entityId={detailTarget.id}
+          onClose={() => setDetailTarget(null)}
+          onUpdated={() => {
+            if (selectedId) {
+              api.getProjectTree(selectedId).then(setTree).catch(() => {});
+            }
+          }} />
       )}
     </div>
   );

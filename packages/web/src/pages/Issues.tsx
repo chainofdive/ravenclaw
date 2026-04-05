@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { api, type Issue } from '../lib/api';
 import { StatusBadge } from '../components/StatusBadge';
 import { PriorityBadge } from '../components/PriorityBadge';
-import { CommentPanel } from '../components/CommentPanel';
+import { DetailPanel } from '../components/DetailPanel';
 
 const statuses = ['all', 'todo', 'in_progress', 'done', 'backlog', 'cancelled'];
 const priorities = ['all', 'critical', 'high', 'medium', 'low'];
@@ -13,11 +13,10 @@ export function Issues() {
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [error, setError] = useState('');
-  const [expandedIssue, setExpandedIssue] = useState<string | null>(null);
+  const [selectedIssue, setSelectedIssue] = useState<{ id: string } | null>(null);
 
-  useEffect(() => {
-    api.listIssues().then(setIssues).catch((e) => setError(e.message));
-  }, []);
+  const loadIssues = () => api.listIssues().then(setIssues).catch((e) => setError(e.message));
+  useEffect(() => { loadIssues(); }, []);
 
   if (error) return <div className="p-6 text-red-600">{error}</div>;
 
@@ -33,31 +32,16 @@ export function Issues() {
       <h2 className="text-xl font-semibold text-slate-950">Issues</h2>
 
       <div className="flex gap-3 items-center">
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20 transition-colors"
-        >
-          {statuses.map((s) => (
-            <option key={s} value={s}>{s === 'all' ? 'All Status' : s.replace('_', ' ')}</option>
-          ))}
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
+          className="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20 transition-colors">
+          {statuses.map((s) => <option key={s} value={s}>{s === 'all' ? 'All Status' : s.replace('_', ' ')}</option>)}
         </select>
-        <select
-          value={priorityFilter}
-          onChange={(e) => setPriorityFilter(e.target.value)}
-          className="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20 transition-colors"
-        >
-          {priorities.map((p) => (
-            <option key={p} value={p}>{p === 'all' ? 'All Priority' : p}</option>
-          ))}
+        <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)}
+          className="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20 transition-colors">
+          {priorities.map((p) => <option key={p} value={p}>{p === 'all' ? 'All Priority' : p}</option>)}
         </select>
-        <input
-          type="text"
-          placeholder="Search issues..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-slate-700 flex-1 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20 transition-colors"
-        />
+        <input type="text" placeholder="Search issues..." value={search} onChange={(e) => setSearch(e.target.value)}
+          className="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-slate-700 flex-1 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20 transition-colors" />
       </div>
 
       {issues.length === 0 ? (
@@ -77,18 +61,14 @@ export function Issues() {
             </thead>
             <tbody>
               {filtered.map((issue) => (
-                <tr
-                  key={issue.id}
+                <tr key={issue.id}
                   className="border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer"
-                  onClick={() => setExpandedIssue(expandedIssue === issue.id ? null : issue.id)}
-                >
+                  onClick={() => setSelectedIssue({ id: issue.id })}>
                   <td className="px-4 py-2.5 font-mono text-slate-400">{issue.key}</td>
                   <td className="px-4 py-2.5 text-slate-800">
-                    {issue.title}
-                    {expandedIssue === issue.id && (
-                      <div onClick={(e) => e.stopPropagation()}>
-                        <CommentPanel entityType="issue" entityId={issue.id} />
-                      </div>
+                    <div>{issue.title}</div>
+                    {issue.description && (
+                      <div className="text-xs text-slate-400 mt-0.5 truncate max-w-md">{issue.description}</div>
                     )}
                   </td>
                   <td className="px-4 py-2.5"><StatusBadge status={issue.status} /></td>
@@ -100,13 +80,16 @@ export function Issues() {
                 </tr>
               ))}
               {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-4 py-6 text-center text-slate-400">No matching issues</td>
-                </tr>
+                <tr><td colSpan={6} className="px-4 py-6 text-center text-slate-400">No matching issues</td></tr>
               )}
             </tbody>
           </table>
         </div>
+      )}
+
+      {selectedIssue && (
+        <DetailPanel entityType="issue" entityId={selectedIssue.id}
+          onClose={() => setSelectedIssue(null)} onUpdated={loadIssues} />
       )}
     </div>
   );

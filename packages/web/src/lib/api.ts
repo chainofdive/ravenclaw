@@ -250,9 +250,17 @@ export const api = {
   listProjects: () => apiFetch<Project[]>('/projects'),
   getProject: (id: string) => apiFetch<Project>(`/projects/${encodeURIComponent(id)}`),
   getProjectTree: (id: string) => apiFetch<ProjectTree>(`/projects/${encodeURIComponent(id)}/tree`),
+  updateProject: (id: string, data: Partial<Project>) =>
+    apiFetch<Project>(`/projects/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(data) }),
   listEpics: () => apiFetch<Epic[]>('/epics'),
+  getEpic: (id: string) => apiFetch<Epic>(`/epics/${encodeURIComponent(id)}`),
   getEpicTree: (id: string) => apiFetch<Epic>(`/epics/${id}/tree`),
+  updateEpic: (id: string, data: Partial<Epic>) =>
+    apiFetch<Epic>(`/epics/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(data) }),
   listIssues: () => apiFetch<Issue[]>('/issues'),
+  getIssue: (id: string) => apiFetch<Issue>(`/issues/${encodeURIComponent(id)}`),
+  updateIssue: (id: string, data: Partial<Issue>) =>
+    apiFetch<Issue>(`/issues/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(data) }),
   listWikiPages: () => apiFetch<WikiPage[]>('/wiki'),
   getWikiPage: (id: string) => apiFetch<WikiPage>(`/wiki/${id}`),
   getContext: () => apiFetch<WorkContext>('/context'),
