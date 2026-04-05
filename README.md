@@ -109,11 +109,21 @@ The dashboard provides a project-centric workspace — like a web version of tmu
 - Session selector — switch between past conversations or start new ones
 - File path auto-detection — clickable links to preview md/images/PDF
 - Support for Claude Code, Gemini CLI, Codex agents
+- Permission mode control: auto-approve, bypass, accept-edits, interactive
+- Tool activity indicator — shows "Running: Bash", "Running: Edit" etc. during execution
 - Fullscreen mode for focused work
 - Stop button to cancel running responses
 
+**Detail Panel (click-to-view):**
+- Click any project name, epic title, or issue row to open slide-in detail panel
+- Works in list view, graph view (click nodes), and issues table
+- Inline editing: click title or description to edit in place
+- Shows all metadata: status, priority, type, assignee, labels, dates
+- Comments section embedded for epics and issues
+
 **Other Features:**
-- Graph view with animated nodes (in_progress issues glow blue)
+- Graph view with animated nodes (in_progress issues glow blue), clickable for details
+- Epic progress auto-calculated from issue status (updates on every change)
 - History tab: context snapshots and work session timeline
 - Human input requests: agents ask questions, users answer via web UI
 - Agents page: register/manage agents with type selection
