@@ -1,238 +1,238 @@
-# Ravenclaw 세션 연동 가이드
+# Ravenclaw Session Guide
 
-새 작업 세션(Claude Code, Codex 등)에서 Ravenclaw 컨텍스트를 연동하는 방법입니다.
-초기 설정은 [SETUP.md](./SETUP.md)를 참고하세요.
-
----
-
-## 데이터 구조
-
-```
-Project (프로젝트/제품)
-  └─ Epic (단계/마일스톤)
-       └─ Issue (개별 작업)
-```
-
-- **프로젝트** = 하나의 제품, 게임, 캠페인 등 작업 스트림
-- **에픽** = 프로젝트 내 단계(phase) 또는 마일스톤
-- **이슈** = 에픽 내 개별 작업
-- **의존성** = 에픽 간/이슈 간 순서 표현 (`add_dependency`)
+How to connect AI coding agents to Ravenclaw and manage work context across sessions.
+For initial setup, see [SETUP.md](./SETUP.md).
 
 ---
 
-## 웹 UI에서 업무 지시 (추천)
+## Data Structure
 
-웹 대시보드의 Projects 페이지에서 직접 에이전트와 대화할 수 있습니다.
+```
+Project (product / game / campaign)
+  └─ Epic (phase / milestone)
+       └─ Issue (individual task)
+```
 
-1. **Projects 페이지 접속** → 좌측에서 프로젝트 선택
-2. **Command 버튼 클릭** → 우측 대화 패널 열림
-3. **메시지 입력** → 에이전트가 해당 프로젝트 디렉토리에서 작업 실행
-4. **대화 연속** → `claude --resume`으로 이전 대화 맥락 유지
-5. **세션 관리** → 과거 대화 목록에서 선택하거나 새 대화 시작
-
-특징:
-- 실시간 스트리밍 응답 (SSE)
-- 대화 히스토리 DB 저장 (서버 재시작 후에도 유지)
-- 파일 경로 자동 감지 → 클릭하면 md/이미지/PDF 미리보기
-- 도구 실행 상태 표시 (Running: Bash, Running: Edit 등)
-- 권한 모드 설정: Auto-approve / Bypass / Accept edits / Interactive
-- 풀스크린 모드 지원
-- Claude Code / Gemini CLI / Codex 에이전트 선택
-
-### 상세 보기 및 편집
-
-프로젝트, 에픽, 이슈의 상세 내용을 확인하고 편집할 수 있습니다.
-
-- **리스트 뷰**: 프로젝트 이름, 에픽 제목, 이슈 행 클릭 → 상세 패널
-- **그래프 뷰**: 노드 클릭 → 상세 패널
-- **이슈 테이블**: 행 클릭 → 상세 패널
-- 제목, 설명 등 클릭하면 인라인 편집 가능
-- 에픽/이슈에는 코멘트 섹션 포함
+- **Project** = A single product, game, campaign, or work stream
+- **Epic** = A phase or milestone within a project
+- **Issue** = An individual task within an epic
+- **Dependency** = Ordering between epics/issues (`add_dependency`)
 
 ---
 
-## CLI/MCP 기반 세션 연동
+## Web UI — Instruct Agents from the Browser (Recommended)
 
-### 방법 1: 스킬 호출 (추천)
+Chat with agents directly from the Projects page in the web dashboard.
+
+1. **Open Projects page** → Select a project from the left panel
+2. **Click Command** → Chat panel slides in from the right
+3. **Type a message** → Agent executes in the project directory
+4. **Conversation continues** → `claude --resume` maintains context across messages
+5. **Session management** → Switch between past conversations or start new ones
+
+Features:
+- Real-time streaming responses (SSE)
+- Chat history stored in DB (persists across server restarts)
+- File path auto-detection — click to preview md/images/PDF
+- Tool activity indicator (Running: Bash, Running: Edit, etc.)
+- Permission mode: Auto-approve / Bypass / Accept edits / Interactive
+- Fullscreen mode
+- Agent selection: Claude Code / Gemini CLI / Codex
+
+### Detail View and Editing
+
+View and edit details of projects, epics, and issues.
+
+- **List view**: Click project name, epic title, or issue row → detail panel
+- **Graph view**: Click any node → detail panel
+- **Issues table**: Click any row → detail panel
+- Click title or description to edit inline
+- Comments section included for epics and issues
+
+---
+
+## CLI / MCP — Agent Session Integration
+
+### Method 1: Skill Invocation (Recommended)
 
 ```
-/ravenclaw-context 를 실행해서 현재 작업 컨텍스트를 확인하고 이어서 작업해줘.
+Run /ravenclaw-context to load the current work context and continue where I left off.
 ```
 
-### 방법 2: 프로젝트 기반 작업 지시
+### Method 2: Project-Based Instructions
 
 ```
-Ravenclaw에서 RC-P1 프로젝트를 확인하고 다음 단계 이슈를 이어서 진행해줘.
+Check project RC-P1 in Ravenclaw and continue with the next issue.
 
-확인 방법:
+How to check:
 - MCP: get_project(key: "RC-P1")
 - CLI: rc project show RC-P1
 ```
 
-### 방법 3: CLI 기반 직접 지시
+### Method 3: CLI-Based Direct Instructions
 
 ```
-이 프로젝트는 Ravenclaw로 관리됩니다.
-1. `rc context` 를 실행하여 전체 작업 컨텍스트를 확인해
-2. 진행할 작업을 선택하고 `rc issue start <key>` 로 시작해
-3. 작업 완료 시 `rc issue done <key>` 로 마무리해
-4. 중요한 내용은 `rc wiki write <slug>` 로 위키에 기록해
+This project is managed with Ravenclaw.
+1. Run `rc context` to check the full work context
+2. Pick a task and start it with `rc issue start <key>`
+3. When done, mark it with `rc issue done <key>`
+4. Record important decisions with `rc wiki write <slug>`
 ```
 
-### 방법 4: 컨텍스트 이관 (세션 전환)
+### Method 4: Context Handoff (Session Switch)
 
 ```
-Ravenclaw 작업 컨텍스트를 확인해줘.
-- `rc context` 로 전체 상황 파악
-- in_progress 상태인 이슈를 확인하고 이어서 진행
-- 기존 세션의 wiki 문서도 참고해서 작업해줘
+Load the Ravenclaw work context.
+- Run `rc context` to understand the full situation
+- Find in_progress issues and continue where they left off
+- Reference existing wiki docs from previous sessions
 ```
 
 ---
 
-## 작업 플로우
+## Workflow
 
 ```
-세션 시작
+Session starts
   │
-  ├─ get_latest_context(RC-P1)         ← 이전 세션의 핸드오프 로드
-  ├─ start_work_session(RC-P1, ...)    ← 세션 기록 시작
-  ├─ rc project show RC-P1             ← 에픽/이슈 현황 파악
+  ├─ get_latest_context(RC-P1)         ← Load previous handoff
+  ├─ start_work_session(RC-P1, ...)    ← Record session start
+  ├─ rc project show RC-P1             ← Review epics/issues
   │
-  ├─ 작업 수행
+  ├─ Work
   │   ├─ rc issue start <key>
-  │   ├─ 코딩
+  │   ├─ ... coding ...
   │   ├─ rc issue done <key>
-  │   └─ save_context(RC-P1, "진행 상황...")  ← 중간 저장
+  │   └─ save_context(RC-P1, "progress...")  ← Save checkpoint
   │
-  ├─ 세션 종료
-  │   ├─ save_context(RC-P1, "핸드오프 내용...", "handoff")
+  ├─ Session end
+  │   ├─ save_context(RC-P1, "handoff notes...", "handoff")
   │   └─ end_work_session(session_id, summary, issues_worked)
   │
-  └─ 다음 세션이 get_latest_context로 이어받음
+  └─ Next session loads via get_latest_context
 ```
 
-### 컨텍스트 스냅샷이란?
+### What Is a Context Snapshot?
 
-에이전트가 작업 중 저장하는 진행 상황 요약입니다. 새 세션의 에이전트가 `get_latest_context`로 이전 에이전트의 마지막 스냅샷을 읽어 이어서 작업합니다.
+A progress summary saved by the agent during work. The next session's agent reads the latest snapshot via `get_latest_context` to continue seamlessly.
 
-**스냅샷에 포함할 내용:**
-- 완료한 이슈와 진행 중인 이슈
-- 내린 기술적 결정과 이유
-- 발견한 문제나 블로커
-- 다음 에이전트가 해야 할 작업
+**What to include in a snapshot:**
+- Completed issues and in-progress issues
+- Technical decisions and rationale
+- Discovered problems or blockers
+- Tasks for the next agent to pick up
 
 ---
 
-## 새 프로젝트 등록 시
+## Registering a New Project
 
 ```bash
-# 1. 프로젝트 생성 (디렉토리 지정 — 에이전트가 이 경로에서 실행됨)
-rc project create "SURVIVE" --description "포커 기반 로그라이크 게임" --priority high --directory /path/to/survive
+# 1. Create project (--directory sets where agents run)
+rc project create "SURVIVE" --description "Poker roguelike game" --priority high --directory /path/to/survive
 
-# 2. 에픽(단계) 생성 — project key 지정
-# MCP: create_epic(project_id: "RC-P1", title: "Phase 1 - 코어 루프")
+# 2. Create epics — specify project key
+# MCP: create_epic(project_id: "RC-P1", title: "Phase 1 - Core Loop")
 # CLI:
-rc epic create "Phase 1 - 코어 루프" --project RC-P1
+rc epic create "Phase 1 - Core Loop" --project RC-P1
 
-# 3. 이슈 생성 — epic key 지정
-rc issue create RC-E1 "카드 데이터 구조 구현" --priority critical
+# 3. Create issues — specify epic key
+rc issue create RC-E1 "Implement card data structures" --priority critical
 
-# 4. 에픽 간 순서 설정 (Phase 2는 Phase 1 이후)
+# 4. Set epic ordering (Phase 2 depends on Phase 1)
 # MCP: add_dependency(source_type: "epic", source_id: "RC-E2", target_type: "epic", target_id: "RC-E1", dependency_type: "depends_on")
 ```
 
 ---
 
-## MCP 도구 목록
+## MCP Tools
 
-| 도구 | 설명 |
-|------|------|
-| **프로젝트** | |
-| `list_projects` | 프로젝트 목록 |
-| `get_project` | 프로젝트 상세 + 에픽/이슈 트리 |
-| `create_project` | 프로젝트 생성 |
-| `update_project` | 프로젝트 수정 |
-| `delete_project` | 프로젝트 삭제 |
-| **에픽** | |
-| `list_epics` | 에픽 목록 |
-| `get_epic` | 에픽 상세 + 이슈 트리 |
-| `create_epic` | 에픽 생성 (project_id로 프로젝트 연결) |
-| `update_epic` | 에픽 수정 |
-| `delete_epic` | 에픽 삭제 |
-| **이슈** | |
-| `list_issues` | 이슈 목록 |
-| `create_issue` | 이슈 생성 (epic key로 지정 가능) |
-| `update_issue` | 이슈 수정 |
-| `delete_issue` | 이슈 삭제 |
-| `start_issue` | 이슈 작업 시작 |
-| `complete_issue` | 이슈 완료 |
-| **의존성** | |
-| `add_dependency` | 에픽 간/이슈 간 의존성 추가 |
-| `list_dependencies` | 의존성 조회 |
-| `remove_dependency` | 의존성 제거 |
-| **세션 & 스냅샷** | |
-| `save_context` | 진행 상황 스냅샷 저장 |
-| `get_latest_context` | 최신 스냅샷 로드 (핸드오프) |
-| `list_context_snapshots` | 스냅샷 히스토리 |
-| `start_work_session` | 작업 세션 시작 기록 |
-| `end_work_session` | 작업 세션 종료 |
-| `list_work_sessions` | 세션 히스토리 |
+| Tool | Description |
+|------|-------------|
+| **Projects** | |
+| `list_projects` | List all projects |
+| `get_project` | Project details + epic/issue tree |
+| `create_project` | Create a project |
+| `update_project` | Update a project |
+| `delete_project` | Delete a project |
+| **Epics** | |
+| `list_epics` | List all epics |
+| `get_epic` | Epic details + issue tree |
+| `create_epic` | Create an epic (link via project_id) |
+| `update_epic` | Update an epic |
+| `delete_epic` | Delete an epic |
+| **Issues** | |
+| `list_issues` | List all issues |
+| `create_issue` | Create an issue (specify epic key) |
+| `update_issue` | Update an issue |
+| `delete_issue` | Delete an issue |
+| `start_issue` | Mark issue as in progress |
+| `complete_issue` | Mark issue as done |
+| **Dependencies** | |
+| `add_dependency` | Add epic-to-epic or issue-to-issue dependency |
+| `list_dependencies` | List dependencies |
+| `remove_dependency` | Remove a dependency |
+| **Sessions & Snapshots** | |
+| `save_context` | Save a progress snapshot |
+| `get_latest_context` | Load the latest snapshot (handoff) |
+| `list_context_snapshots` | Snapshot history |
+| `start_work_session` | Record session start |
+| `end_work_session` | Record session end |
+| `list_work_sessions` | Session history |
 | **Human Input** | |
-| `request_human_input` | 사용자에게 질문 (웹 UI에서 답변) |
-| `check_human_input` | 답변 확인 (폴링) |
-| `list_pending_inputs` | 대기 중 질문 목록 |
-| **컨텍스트** | |
-| `get_work_context` | 전체 작업 컨텍스트 |
-| `get_work_context_summary` | 요약 컨텍스트 (토큰 절약) |
-| **기타** | |
-| `search` | 전체 텍스트 검색 |
-| `list_wiki_pages` / `create_wiki_page` / `update_wiki_page` | 위키 |
-| `list_comments` / `add_comment` | 코멘트 |
-| `acquire_lock` / `release_lock` | 에픽 잠금 |
+| `request_human_input` | Ask the user a question (answered via web UI) |
+| `check_human_input` | Check for an answer (polling) |
+| `list_pending_inputs` | List pending questions |
+| **Context** | |
+| `get_work_context` | Full work context |
+| `get_work_context_summary` | Summarized context (saves tokens) |
+| **Other** | |
+| `search` | Full-text search |
+| `list_wiki_pages` / `create_wiki_page` / `update_wiki_page` | Wiki |
+| `list_comments` / `add_comment` | Comments |
+| `acquire_lock` / `release_lock` | Epic locking |
 
 ---
 
-## CLI 명령어 요약
+## CLI Reference
 
 ```bash
-# 프로젝트
-rc project list                # 프로젝트 목록
-rc project show RC-P1          # 프로젝트 트리 (에픽 + 이슈)
-rc project create "이름" --directory /path/to/project
+# Projects
+rc project list                # List projects
+rc project show RC-P1          # Project tree (epics + issues)
+rc project create "Name" --directory /path/to/project
 rc project update RC-P1 --status active --directory /new/path
 rc project delete RC-P1
 
-# 에픽
+# Epics
 rc epic list
 rc epic show RC-E7
 rc epic create "Phase 1" --project RC-P1
 rc epic update RC-E7 --status active
 rc epic delete RC-E7
 
-# 이슈
+# Issues
 rc issue list
-rc issue create RC-E7 "제목"
+rc issue create RC-E7 "Title"
 rc issue start RC-I3
 rc issue done RC-I3
 rc issue delete RC-I3
 
-# 컨텍스트 & 스냅샷
-rc context                                 # 전체 컨텍스트
-rc context save RC-P1 "진행 상황..."       # 스냅샷 저장
-rc context latest RC-P1                    # 최신 스냅샷 확인
-rc context history RC-P1                   # 스냅샷 히스토리
+# Context & Snapshots
+rc context                                 # Full context
+rc context save RC-P1 "progress..."        # Save snapshot
+rc context latest RC-P1                    # Latest snapshot
+rc context history RC-P1                   # Snapshot history
 
-# 세션
-rc session start -p RC-P1 -s my-session    # 세션 시작
-rc session end -s my-session --summary "..." # 세션 종료
-rc session list -p RC-P1                   # 세션 히스토리
+# Sessions
+rc session start -p RC-P1 -s my-session    # Start session
+rc session end -s my-session --summary "..." # End session
+rc session list -p RC-P1                   # Session history
 
-# 위키 / 검색
+# Wiki / Search
 rc wiki list
-rc search "키워드"
+rc search "keyword"
 
-# 락
+# Locks
 rc lock list
 rc lock acquire <epic-id> --session $SESSION_ID
 rc lock release <epic-id> --session $SESSION_ID
@@ -240,12 +240,12 @@ rc lock release <epic-id> --session $SESSION_ID
 
 ---
 
-## 트러블슈팅
+## Troubleshooting
 
-| 증상 | 해결 |
-|------|------|
-| `CONNECTION_ERROR` | API 서버 실행 확인: `curl http://localhost:3000/api/v1/health` |
-| `UNAUTHORIZED` | `cat ~/.ravenclaw/config.json`에서 api_key 확인 |
-| MCP 도구 안 보임 | `~/.claude.json`에 ravenclaw MCP 서버 등록 확인 |
-| `/ravenclaw-context` 안됨 | `ls ~/.claude/skills/ravenclaw-context` 확인 |
-| `LOCKED` 에러 | `rc lock list` → `rc lock force-release <epic-id>` |
+| Symptom | Solution |
+|---------|----------|
+| `CONNECTION_ERROR` | Check API server: `curl http://localhost:3000/api/v1/health` |
+| `UNAUTHORIZED` | Check API key in `cat ~/.ravenclaw/config.json` |
+| MCP tools not visible | Verify ravenclaw MCP server in `~/.claude.json` |
+| `/ravenclaw-context` not working | Check `ls ~/.claude/skills/ravenclaw-context` |
+| `LOCKED` error | `rc lock list` → `rc lock force-release <epic-id>` |

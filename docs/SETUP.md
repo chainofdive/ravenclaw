@@ -1,19 +1,19 @@
-# Ravenclaw 초기 설정
+# Ravenclaw Setup Guide
 
-Ravenclaw를 처음 설치하고 환경을 구성하는 가이드입니다.
-설정 완료 후 세션 연동은 [SESSION_GUIDE.md](./SESSION_GUIDE.md)를 참고하세요.
+Initial installation and environment configuration.
+After setup, see [SESSION_GUIDE.md](./SESSION_GUIDE.md) for agent integration.
 
 ---
 
-## 1. 사전 요구사항
+## 1. Prerequisites
 
 - Node.js >= 20
 - pnpm >= 9
-- PostgreSQL (로컬 또는 Supabase)
+- PostgreSQL (local or Supabase)
 
 ---
 
-## 2. 프로젝트 클론 및 빌드
+## 2. Clone and Build
 
 ```bash
 git clone https://github.com/chainofdive/ravenclaw.git
@@ -24,72 +24,72 @@ pnpm build
 
 ---
 
-## 3. 데이터베이스 설정
+## 3. Database Setup
 
-### 로컬 PostgreSQL
+### Local PostgreSQL
 
 ```bash
 docker-compose up -d
-# 또는 직접 DB 생성: createdb ravenclaw
+# Or create the DB manually: createdb ravenclaw
 ```
 
-`.env` 파일 설정:
+Configure `.env`:
 ```bash
 cp .env.example .env
 # DATABASE_URL=postgresql://ravenclaw:ravenclaw@localhost:5432/ravenclaw
 ```
 
-### Supabase (클라우드)
+### Supabase (Cloud)
 
 ```
 DATABASE_URL=postgresql://postgres.[ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres
 ```
 
-### 스키마 적용
+### Apply Schema
 
 ```bash
 source .env && pnpm --filter @ravenclaw/core db:push
-# 또는 시드 데이터 포함:
+# Or with seed data:
 psql $DATABASE_URL -f packages/supabase/seed.sql
 ```
 
 ---
 
-## 4. API 서버 실행
+## 4. Start API Server
 
 ```bash
 source .env && DATABASE_URL="$DATABASE_URL" node packages/api/dist/index.js
 ```
 
-확인: `curl http://localhost:3000/api/v1/health`
+Verify: `curl http://localhost:3000/api/v1/health`
 
 ---
 
-## 5. 웹 대시보드 실행
+## 5. Start Web Dashboard
 
 ```bash
 pnpm --filter @ravenclaw/web dev
-# http://localhost:5173 에서 접속
+# Open http://localhost:5173
 ```
 
 ---
 
-## 6. CLI 설치
+## 6. Install CLI
 
 ```bash
 npm link packages/cli
 rc init
 # API URL: http://localhost:3000
-# API Key: rvc_sk_test1234567890abcdef (seed 기본 키)
+# API Key: rvc_sk_test1234567890abcdef (default seed key)
 ```
 
-확인: `rc project list`
+Verify: `rc project list`
 
 ---
 
-## 7. MCP 서버 등록 (Claude Code 글로벌)
+## 7. Register MCP Server (Claude Code Global)
 
-`~/.claude.json`의 `mcpServers`에 추가:
+Add to `~/.claude.json` under `mcpServers`:
 
 ```json
 {
@@ -106,11 +106,11 @@ rc init
 }
 ```
 
-> 경로 확인: `realpath packages/mcp/dist/index.js`
+> Find the path: `realpath packages/mcp/dist/index.js`
 
 ---
 
-## 8. 스킬 & 에이전트 등록 (Claude Code 글로벌)
+## 8. Register Skills & Agents (Claude Code Global)
 
 ```bash
 cp -r skills/ravenclaw-context ~/.claude/skills/
@@ -119,13 +119,13 @@ mkdir -p ~/.claude/agents && cp agents/ravenclaw.md ~/.claude/agents/
 
 ---
 
-## 9. 설정 확인 체크리스트
+## 9. Verification Checklist
 
 ```bash
 curl -s http://localhost:3000/api/v1/health | jq .data.status  # → "ok"
-rc project list                                                  # → 프로젝트 목록
-ls ~/.claude/skills/ravenclaw-context/SKILL.md                  # → 파일 존재
-ls ~/.claude/agents/ravenclaw.md                                # → 파일 존재
+rc project list                                                  # → project list
+ls ~/.claude/skills/ravenclaw-context/SKILL.md                  # → file exists
+ls ~/.claude/agents/ravenclaw.md                                # → file exists
 ```
 
-모든 항목이 확인되면 [SESSION_GUIDE.md](./SESSION_GUIDE.md)로 진행하세요.
+Once all checks pass, proceed to [SESSION_GUIDE.md](./SESSION_GUIDE.md).
