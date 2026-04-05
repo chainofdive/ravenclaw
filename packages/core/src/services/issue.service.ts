@@ -1,6 +1,6 @@
-import { eq, and, desc, count } from "drizzle-orm";
+import { eq, and, desc, count, sql } from "drizzle-orm";
 import { type Database } from "../db/client.js";
-import { issues } from "../db/schema.js";
+import { issues, epics } from "../db/schema.js";
 import type {
   Issue,
   CreateIssueInput,
@@ -89,6 +89,9 @@ export class IssueService {
 
     await this.logger.logCreate(input.workspaceId, "issue", issue.id);
 
+    // Recalculate epic progress when issue is added
+    await this.recalcEpicProgress(issue.epicId);
+
     return issue;
   }
 
@@ -128,6 +131,15 @@ export class IssueService {
 
     await this.logger.logUpdate(existing.workspaceId, "issue", id, updateData);
 
+    // Recalculate epic progress if status or epicId changed
+    if (input.status !== undefined || input.epicId !== undefined) {
+      await this.recalcEpicProgress(updated.epicId);
+      // If epic changed, also recalc the old epic
+      if (input.epicId !== undefined && existing.epicId && existing.epicId !== input.epicId) {
+        await this.recalcEpicProgress(existing.epicId);
+      }
+    }
+
     return updated;
   }
 
@@ -166,6 +178,9 @@ export class IssueService {
       status,
     );
 
+    // Recalculate parent epic progress
+    await this.recalcEpicProgress(updated.epicId);
+
     return updated;
   }
 
@@ -182,6 +197,9 @@ export class IssueService {
       .where(eq(issues.id, id));
 
     await this.logger.logDelete(existing.workspaceId, "issue", id);
+
+    // Recalculate parent epic progress after deletion
+    await this.recalcEpicProgress(existing.epicId);
   }
 
   async getSubtasks(id: string): Promise<Issue[]> {
@@ -190,6 +208,27 @@ export class IssueService {
       .from(issues)
       .where(eq(issues.parentIssueId, id))
       .orderBy(desc(issues.createdAt));
+  }
+
+  /** Recalculate and persist the parent epic's progress percentage. */
+  private async recalcEpicProgress(epicId: string | null): Promise<void> {
+    if (!epicId) return;
+    const result = await this.db
+      .select({
+        total: count(),
+        done: sql<number>`count(*) filter (where ${issues.status} = 'done')`,
+      })
+      .from(issues)
+      .where(eq(issues.epicId, epicId));
+
+    const totalNum = Number(result[0].total);
+    const doneNum = Number(result[0].done);
+    const progress = totalNum === 0 ? 0 : Math.round((doneNum / totalNum) * 100);
+
+    await this.db
+      .update(epics)
+      .set({ progress, updatedAt: new Date() })
+      .where(eq(epics.id, epicId));
   }
 
   private async generateKey(workspaceId: string): Promise<string> {
