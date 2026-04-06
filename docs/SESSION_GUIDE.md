@@ -102,7 +102,8 @@ Session starts
   ├─ Work
   │   ├─ rc issue start <key>
   │   ├─ ... coding ...
-  │   ├─ rc issue done <key>
+  │   ├─ complete_issue(<key>, summary: "what was done and why")
+  │   │     ← Completion note persisted as comment, loaded in future contexts
   │   └─ save_context(RC-P1, "progress...")  ← Save checkpoint
   │
   ├─ Session end
@@ -121,6 +122,26 @@ A progress summary saved by the agent during work. The next session's agent read
 - Technical decisions and rationale
 - Discovered problems or blockers
 - Tasks for the next agent to pick up
+
+### What Are Completion Notes?
+
+When an agent calls `complete_issue`, it can provide a `summary` parameter explaining what was done and why. This note is stored as a comment on the issue and automatically included when future sessions load context via `get_work_context`.
+
+```
+complete_issue("RC-I26", summary: "Used ECS pattern for card entities.
+  Chose linked list over array for deck — O(1) shuffle required.
+  Phaser selected over PixiJS for built-in physics support.")
+```
+
+The next session sees this in the work context:
+```
+- RC-I26 [DONE] Card data structures
+  > Used ECS pattern for card entities. Chose linked list over array...
+```
+
+This prevents the common problem where agents rewrite code without understanding why it was written a certain way. The completion note carries the "why" forward across sessions.
+
+If no summary is provided, the agent receives a warning encouraging it to record one.
 
 ---
 
@@ -166,7 +187,7 @@ rc issue create RC-E1 "Implement card data structures" --priority critical
 | `update_issue` | Update an issue |
 | `delete_issue` | Delete an issue |
 | `start_issue` | Mark issue as in progress |
-| `complete_issue` | Mark issue as done |
+| `complete_issue` | Mark issue as done (accepts optional `summary` for completion note) |
 | **Dependencies** | |
 | `add_dependency` | Add epic-to-epic or issue-to-issue dependency |
 | `list_dependencies` | List dependencies |

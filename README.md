@@ -46,6 +46,7 @@ Ravenclaw solves this with a **project management system that agents can read an
 
 ### Context & Sessions
 - **Context handoff** — Agents save snapshots; new sessions load where the last left off
+- **Completion notes** — Agents record what was done and why when closing issues; future sessions carry this rationale forward automatically
 - **Human-in-the-loop** — Agents ask questions, users answer via web UI
 - **Session locking** — Epic-level locks prevent concurrent agent conflicts
 - **Persistent chat history** — Conversations stored in DB, survive server restarts
@@ -113,7 +114,9 @@ Agent starts a session
   │
   ├─ start_issue(RC-I26)            ← pick up a task
   ├─ ... coding ...
-  ├─ complete_issue(RC-I26)         ← mark done (epic progress updates)
+  ├─ complete_issue(RC-I26,         ← mark done + record what was done and why
+  │    summary: "Used ECS pattern     (completion note persisted for future sessions)
+  │    for O(1) shuffle...")
   ├─ save_context(RC-P1, "...")     ← save progress for next session
   │
   ├─ request_human_input(...)       ← ask user if needed
