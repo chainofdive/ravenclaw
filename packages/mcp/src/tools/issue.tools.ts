@@ -146,13 +146,24 @@ export function registerIssueTools(
   // ── complete_issue ──────────────────────────────────────────────────
   server.tool(
     "complete_issue",
-    "Mark an issue as done (complete it)",
+    "Mark an issue as done. Provide a summary of what was done and key decisions made — this is stored as a completion note so future sessions retain the rationale.",
     {
       id: z.string().describe("Issue ID (UUID) or key"),
+      summary: z
+        .string()
+        .optional()
+        .describe(
+          "Completion summary: what was done, key decisions made, and why. Strongly recommended — this note is persisted and loaded by future agent sessions to preserve context.",
+        ),
     },
-    async ({ id }) => {
-      const issue = await client.completeIssue(id);
-      const text = `Issue completed.\n\n${formatIssue(issue as Record<string, unknown>)}`;
+    async ({ id, summary }) => {
+      const issue = await client.completeIssue(id, summary);
+      let text = `Issue completed.\n\n${formatIssue(issue as Record<string, unknown>)}`;
+      if (summary) {
+        text += `\n\nCompletion note saved: "${summary}"`;
+      } else {
+        text += `\n\n⚠ No completion summary provided. Consider calling complete_issue with a summary to record what was done and why — future sessions will lose this context otherwise.`;
+      }
       return { content: [{ type: "text", text }] };
     },
   );

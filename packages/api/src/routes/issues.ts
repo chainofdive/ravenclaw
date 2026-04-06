@@ -166,11 +166,24 @@ issues.post("/:id/start", async (c) => {
 // POST /api/v1/issues/:id/done — mark as done
 issues.post("/:id/done", async (c) => {
   const issueService = c.get("issueService");
+  const commentService = c.get("commentService");
   const workspaceId = c.get("workspaceId");
   const id = c.req.param("id");
+  const body = await c.req.json().catch(() => ({}));
 
   const existing = await resolveIssue(issueService, id, workspaceId);
   const issue = await issueService.updateStatus(existing.id, "done");
+
+  // Save completion note as a comment if provided
+  if (body.summary?.trim()) {
+    await commentService.create({
+      workspaceId,
+      entityType: "issue",
+      entityId: existing.id,
+      content: `**Completion note:** ${body.summary.trim()}`,
+      author: "agent",
+    });
+  }
 
   return c.json({ data: issue });
 });

@@ -108,6 +108,7 @@ export function formatIssue(issue: Rec): string {
   if (issue.actualHours) lines.push(`Actual: ${issue.actualHours}h`);
   if (issue.startedAt) lines.push(`Started: ${formatDate(issue.startedAt)}`);
   if (issue.completedAt) lines.push(`Completed: ${formatDate(issue.completedAt)}`);
+  if (issue.completionNote) lines.push(`Completion note: ${issue.completionNote}`);
   if (issue.description) lines.push("", issue.description);
 
   return lines.join("\n");
@@ -154,25 +155,35 @@ export function formatWikiPageList(pages: Rec[]): string {
 export function formatContext(ctx: Rec): string {
   const lines: string[] = ["# Work Context"];
 
-  // Active epics
+  // Active epics with issues
   const activeEpics = (ctx.activeEpics ?? ctx.epics ?? []) as Rec[];
   if (activeEpics.length > 0) {
-    lines.push("", "## Active Epics");
+    lines.push("", "## Epics");
     for (const e of activeEpics) {
       lines.push(
-        `- ${e.key ?? "—"} ${statusBadge(e.status)} ${e.title} (${e.progress ?? 0}%)`,
+        `\n### ${e.key ?? "—"} ${statusBadge(e.status)} ${e.title} (${e.progress ?? 0}%)`,
       );
+      const epicIssues = (e.issues ?? []) as Rec[];
+      for (const i of epicIssues) {
+        let line = `- ${i.key ?? "—"} ${statusBadge(i.status)} ${i.title}${i.assignee ? ` @${i.assignee}` : ""}`;
+        if (i.completionNote) {
+          line += `\n  > ${i.completionNote}`;
+        }
+        lines.push(line);
+      }
     }
   }
 
-  // Current issues
-  const currentIssues = (ctx.currentIssues ?? ctx.issues ?? []) as Rec[];
+  // Standalone issues (if provided separately)
+  const currentIssues = (ctx.currentIssues ?? []) as Rec[];
   if (currentIssues.length > 0) {
     lines.push("", "## Current Issues");
     for (const i of currentIssues) {
-      lines.push(
-        `- ${i.key ?? "—"} ${statusBadge(i.status)} ${i.title}${i.assignee ? ` @${i.assignee}` : ""}`,
-      );
+      let line = `- ${i.key ?? "—"} ${statusBadge(i.status)} ${i.title}${i.assignee ? ` @${i.assignee}` : ""}`;
+      if (i.completionNote) {
+        line += `\n  > ${i.completionNote}`;
+      }
+      lines.push(line);
     }
   }
 

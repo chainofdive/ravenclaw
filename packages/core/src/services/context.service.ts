@@ -9,6 +9,7 @@ import {
   ontologyRelations,
   activityLog,
   dependencies,
+  comments,
 } from "../db/schema.js";
 import type { Epic, Issue, WikiPage } from "../types/index.js";
 
@@ -119,7 +120,33 @@ export class ContextService {
           .from(issues)
           .where(eq(issues.epicId, epic.id))
           .orderBy(desc(issues.updatedAt));
-        return { ...epic, issues: epicIssues };
+
+        // Attach completion notes to done issues
+        const issuesWithNotes = await Promise.all(
+          epicIssues.map(async (issue) => {
+            if (issue.status === "done") {
+              const completionNotes = await this.db
+                .select({ content: comments.content })
+                .from(comments)
+                .where(
+                  and(
+                    eq(comments.entityType, "issue"),
+                    eq(comments.entityId, issue.id),
+                  ),
+                )
+                .orderBy(desc(comments.createdAt))
+                .limit(1);
+
+              const note = completionNotes[0]?.content;
+              if (note?.startsWith("**Completion note:**")) {
+                return { ...issue, completionNote: note.replace("**Completion note:** ", "") };
+              }
+            }
+            return issue;
+          }),
+        );
+
+        return { ...epic, issues: issuesWithNotes };
       }),
     );
 

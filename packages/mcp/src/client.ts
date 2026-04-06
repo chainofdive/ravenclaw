@@ -195,10 +195,11 @@ export class RavenclawApiClient {
     );
   }
 
-  async completeIssue(id: string): Promise<unknown> {
+  async completeIssue(id: string, summary?: string): Promise<unknown> {
     return this.request<unknown>(
       "POST",
       `/issues/${encodeURIComponent(id)}/done`,
+      summary ? { summary } : undefined,
     );
   }
 
