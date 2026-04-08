@@ -127,7 +127,29 @@ export function DetailPanel({ entityType, entityId, onClose, onUpdated }: Props)
             </button>
           </div>
           <div className="flex items-center gap-2">
-            <StatusBadge status={status} />
+            <select
+              value={status}
+              onChange={async (e) => {
+                const newStatus = e.target.value;
+                try {
+                  if (entityType === 'project') await api.updateProject(entityId, { status: newStatus });
+                  else if (entityType === 'epic') await api.updateEpic(entityId, { status: newStatus });
+                  else await api.updateIssue(entityId, { status: newStatus });
+                  await load();
+                  onUpdated?.();
+                } catch { /* ignore */ }
+              }}
+              className="text-xs font-medium px-2 py-0.5 rounded-md border border-gray-200 bg-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal-300"
+            >
+              {(entityType === 'project'
+                ? ['planning', 'active', 'completed', 'on_hold', 'cancelled']
+                : entityType === 'epic'
+                ? ['backlog', 'active', 'completed', 'cancelled']
+                : ['todo', 'in_progress', 'done', 'cancelled']
+              ).map((s) => (
+                <option key={s} value={s}>{s.replace('_', ' ')}</option>
+              ))}
+            </select>
             <PriorityBadge priority={priority} />
             {entityType === 'issue' && (
               <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full">{(entity as Issue).issueType}</span>
